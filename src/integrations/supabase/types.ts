@@ -22,10 +22,16 @@ export type Database = {
           email_address: string
           friendly_name: string
           id: string
+          imap_host: string | null
+          imap_port: number | null
           is_default_sender: boolean
+          password: string | null
           provider: string
+          smtp_host: string | null
+          smtp_port: number | null
           updated_at: string
           user_id: string
+          username: string | null
         }
         Insert: {
           connection_status?: string
@@ -34,10 +40,16 @@ export type Database = {
           email_address: string
           friendly_name: string
           id?: string
+          imap_host?: string | null
+          imap_port?: number | null
           is_default_sender?: boolean
+          password?: string | null
           provider?: string
+          smtp_host?: string | null
+          smtp_port?: number | null
           updated_at?: string
           user_id: string
+          username?: string | null
         }
         Update: {
           connection_status?: string
@@ -46,10 +58,16 @@ export type Database = {
           email_address?: string
           friendly_name?: string
           id?: string
+          imap_host?: string | null
+          imap_port?: number | null
           is_default_sender?: boolean
+          password?: string | null
           provider?: string
+          smtp_host?: string | null
+          smtp_port?: number | null
           updated_at?: string
           user_id?: string
+          username?: string | null
         }
         Relationships: []
       }
