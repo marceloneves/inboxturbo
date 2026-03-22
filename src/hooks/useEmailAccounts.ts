@@ -54,8 +54,9 @@ export function useEmailAccounts() {
       is_default_sender?: boolean;
     }) => {
       if (!user) throw new Error('Not authenticated');
-      const { data, error } = await supabase
-        .from('email_accounts')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase
+        .from('email_accounts') as any)
         .insert({
           user_id: user.id,
           friendly_name: account.friendly_name,
@@ -69,7 +70,7 @@ export function useEmailAccounts() {
           username: account.username,
           password: account.password,
           is_default_sender: account.is_default_sender || false,
-        } as Record<string, unknown>)
+        })
         .select()
         .single();
       if (error) throw error;
@@ -86,9 +87,10 @@ export function useEmailAccounts() {
 
   const updateAccount = useMutation({
     mutationFn: async ({ id, ...updates }: { id: string } & Partial<EmailAccountRow>) => {
-      const { error } = await supabase
-        .from('email_accounts')
-        .update(updates as Record<string, unknown>)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase
+        .from('email_accounts') as any)
+        .update(updates)
         .eq('id', id);
       if (error) throw error;
     },
@@ -122,14 +124,13 @@ export function useEmailAccounts() {
     mutationFn: async (id: string) => {
       if (!user) throw new Error('Not authenticated');
       // Clear all defaults first
-      await supabase
-        .from('email_accounts')
-        .update({ is_default_sender: false } as Record<string, unknown>)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase.from('email_accounts') as any)
+        .update({ is_default_sender: false })
         .eq('user_id', user.id);
-      // Set new default
-      const { error } = await supabase
-        .from('email_accounts')
-        .update({ is_default_sender: true } as Record<string, unknown>)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('email_accounts') as any)
+        .update({ is_default_sender: true })
         .eq('id', id);
       if (error) throw error;
     },
