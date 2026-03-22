@@ -14,7 +14,113 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      email_accounts: {
+        Row: {
+          connection_status: string
+          connection_type: string
+          created_at: string
+          email_address: string
+          friendly_name: string
+          id: string
+          is_default_sender: boolean
+          provider: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          connection_status?: string
+          connection_type?: string
+          created_at?: string
+          email_address: string
+          friendly_name: string
+          id?: string
+          is_default_sender?: boolean
+          provider?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          connection_status?: string
+          connection_type?: string
+          created_at?: string
+          email_address?: string
+          friendly_name?: string
+          id?: string
+          is_default_sender?: boolean
+          provider?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_preferences: {
+        Row: {
+          created_at: string
+          default_email_account_id: string | null
+          density: string
+          id: string
+          theme: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          default_email_account_id?: string | null
+          density?: string
+          id?: string
+          theme?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          default_email_account_id?: string | null
+          density?: string
+          id?: string
+          theme?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_preferences_default_email_account_id_fkey"
+            columns: ["default_email_account_id"]
+            isOneToOne: false
+            referencedRelation: "email_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
