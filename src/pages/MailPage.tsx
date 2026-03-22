@@ -1,12 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Inbox, Mail } from 'lucide-react';
+import { Inbox, Mail, Loader2 } from 'lucide-react';
+import { useEmailAccounts } from '@/hooks/useEmailAccounts';
+import { useEmails, type RemoteEmail } from '@/hooks/useEmails';
 import { mockEmails, mockAccounts } from '@/data/mockData';
 import { EmailList } from '@/components/EmailList';
 import { EmailViewer } from '@/components/EmailViewer';
 import { EmptyState } from '@/components/EmptyState';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { AccountBadge } from '@/components/AccountBadge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Email } from '@/data/mockData';
@@ -17,13 +18,43 @@ interface MailPageProps {
 
 export default function MailPage({ folder }: MailPageProps) {
   const { searchQuery } = useOutletContext<{ searchQuery: string }>();
+  const { accounts, isLoading: accountsLoading } = useEmailAccounts();
+  const { emails: remoteEmails, isLoading: emailsLoading, fetchEmailBody } = useEmails(folder);
+
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [filterAccount, setFilterAccount] = useState<string | null>(null);
-  const [emails, setEmails] = useState(mockEmails);
+  const [localMockEmails, setLocalMockEmails] = useState(mockEmails);
+  const [loadingBody, setLoadingBody] = useState(false);
+
+  const hasRealAccounts = accounts.length > 0;
+
+  // Convert remote emails to the Email interface for display
+  const convertedRemoteEmails: Email[] = useMemo(() => {
+    return remoteEmails.map((re) => ({
+      id: `${re.account_id}-${re.uid}`,
+      account_id: re.account_id,
+      account_name: re.account_name,
+      from: re.from,
+      from_email: re.from_email,
+      to: re.to,
+      cc: re.cc,
+      subject: re.subject,
+      preview: re.preview || re.subject,
+      body: re.body || '',
+      date: re.date,
+      is_read: re.is_read,
+      folder,
+      has_attachments: re.has_attachments,
+    }));
+  }, [remoteEmails, folder]);
+
+  // Use real emails if accounts exist, otherwise mock
+  const sourceEmails = hasRealAccounts ? convertedRemoteEmails : localMockEmails.filter((e) => e.folder === folder);
+  const displayAccounts = hasRealAccounts ? accounts.map(a => ({ id: a.id, friendly_name: a.friendly_name })) : mockAccounts;
 
   const filteredEmails = useMemo(() => {
-    let result = emails.filter((e) => e.folder === folder);
+    let result = sourceEmails;
     if (filterAccount) result = result.filter((e) => e.account_id === filterAccount);
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -34,23 +65,54 @@ export default function MailPage({ folder }: MailPageProps) {
       );
     }
     return result;
-  }, [emails, folder, filterAccount, searchQuery]);
+  }, [sourceEmails, filterAccount, searchQuery]);
 
-  const handleSelectEmail = (email: Email) => {
-    setSelectedEmail(email);
-    setEmails((prev) => prev.map((e) => e.id === email.id ? { ...e, is_read: true } : e));
+  const handleSelectEmail = async (email: Email) => {
+    if (hasRealAccounts && !email.body) {
+      setSelectedEmail({ ...email, body: '<p>Carregando...</p>' });
+      setLoadingBody(true);
+      const parts = email.id.split('-');
+      const accountId = parts[0];
+      const uid = parseInt(parts.slice(1).join('-'));
+      const fullEmail = await fetchEmailBody(accountId, uid);
+      if (fullEmail) {
+        setSelectedEmail({
+          ...email,
+          body: fullEmail.body || '',
+          to: fullEmail.to,
+          cc: fullEmail.cc,
+        });
+      }
+      setLoadingBody(false);
+    } else {
+      setSelectedEmail(email);
+    }
+
+    if (!hasRealAccounts) {
+      setLocalMockEmails((prev) => prev.map((e) => e.id === email.id ? { ...e, is_read: true } : e));
+    }
   };
 
   const handleDelete = (id: string) => {
-    setEmails((prev) => prev.map((e) => e.id === id ? { ...e, folder: 'trash' as const } : e));
+    if (!hasRealAccounts) {
+      setLocalMockEmails((prev) => prev.map((e) => e.id === id ? { ...e, folder: 'trash' as const } : e));
+    }
     setSelectedEmail(null);
     setDeleteTarget(null);
   };
 
   const folderLabels = { inbox: 'Caixa de entrada', sent: 'Enviados', trash: 'Lixeira' };
-  const emptyIcons = { inbox: Inbox, sent: Inbox, trash: Inbox };
+  const isLoading = accountsLoading || (hasRealAccounts && emailsLoading);
 
-  if (mockAccounts.length === 0) {
+  if (accountsLoading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!hasRealAccounts && mockAccounts.length === 0) {
     return (
       <EmptyState
         icon={Mail}
@@ -74,6 +136,7 @@ export default function MailPage({ folder }: MailPageProps) {
           <span className="text-xs text-muted-foreground">
             ({filteredEmails.length})
           </span>
+          {isLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
           <div className="flex-1" />
         </div>
 
@@ -87,7 +150,7 @@ export default function MailPage({ folder }: MailPageProps) {
           >
             Todas
           </Button>
-          {mockAccounts.map((acc) => (
+          {displayAccounts.map((acc) => (
             <Button
               key={acc.id}
               variant={filterAccount === acc.id ? 'secondary' : 'ghost'}
@@ -102,9 +165,9 @@ export default function MailPage({ folder }: MailPageProps) {
 
         {filteredEmails.length === 0 ? (
           <EmptyState
-            icon={emptyIcons[folder]}
+            icon={Inbox}
             title="Nenhum e-mail"
-            description={folder === 'inbox' ? 'Sua caixa de entrada está vazia.' : 'Nenhuma mensagem encontrada.'}
+            description={isLoading ? 'Carregando e-mails...' : folder === 'inbox' ? 'Sua caixa de entrada está vazia.' : 'Nenhuma mensagem encontrada.'}
           />
         ) : (
           <EmailList

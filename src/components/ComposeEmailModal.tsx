@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { AccountSelector } from '@/components/AccountSelector';
+import { useEmailAccounts } from '@/hooks/useEmailAccounts';
+import { useSendEmail } from '@/hooks/useSendEmail';
 import { mockAccounts } from '@/data/mockData';
 import { toast } from 'sonner';
 
@@ -25,8 +27,14 @@ interface ComposeEmailModalProps {
 }
 
 export function ComposeEmailModal({ open, onClose }: ComposeEmailModalProps) {
-  const [sending, setSending] = useState(false);
-  const defaultAccount = mockAccounts.find((a) => a.is_default_sender) || mockAccounts[0];
+  const { accounts } = useEmailAccounts();
+  const sendEmail = useSendEmail();
+
+  const displayAccounts = accounts.length > 0
+    ? accounts.map(a => ({ id: a.id, friendly_name: a.friendly_name, email_address: a.email_address, is_default_sender: a.is_default_sender }))
+    : mockAccounts.map(a => ({ id: a.id, friendly_name: a.friendly_name, email_address: a.email_address, is_default_sender: a.is_default_sender }));
+
+  const defaultAccount = displayAccounts.find((a) => a.is_default_sender) || displayAccounts[0];
   const [selectedAccount, setSelectedAccount] = useState(defaultAccount?.id || '');
 
   const { register, handleSubmit, formState: { errors }, reset } = useForm({
@@ -35,14 +43,31 @@ export function ComposeEmailModal({ open, onClose }: ComposeEmailModalProps) {
 
   if (!open) return null;
 
-  const onSubmit = async () => {
-    setSending(true);
-    // Simulate sending
-    await new Promise((r) => setTimeout(r, 1500));
-    setSending(false);
-    toast.success('E-mail enviado com sucesso!');
-    reset();
-    onClose();
+  const onSubmit = async (data: Record<string, string>) => {
+    const hasRealAccounts = accounts.length > 0;
+
+    if (hasRealAccounts) {
+      try {
+        await sendEmail.mutateAsync({
+          account_id: selectedAccount,
+          to: data.to,
+          cc: data.cc,
+          bcc: data.bcc,
+          subject: data.subject,
+          body: `<p>${data.body.replace(/\n/g, '</p><p>')}</p>`,
+        });
+        reset();
+        onClose();
+      } catch {
+        // Error handled by mutation
+      }
+    } else {
+      // Mock sending
+      await new Promise((r) => setTimeout(r, 1500));
+      toast.success('E-mail enviado com sucesso! (simulação)');
+      reset();
+      onClose();
+    }
   };
 
   return (
@@ -61,7 +86,7 @@ export function ComposeEmailModal({ open, onClose }: ComposeEmailModalProps) {
             <div className="space-y-1.5">
               <Label>Conta de envio</Label>
               <AccountSelector
-                accounts={mockAccounts}
+                accounts={displayAccounts}
                 value={selectedAccount}
                 onValueChange={setSelectedAccount}
               />
@@ -104,8 +129,8 @@ export function ComposeEmailModal({ open, onClose }: ComposeEmailModalProps) {
 
           <div className="flex items-center justify-end gap-2 border-t px-4 py-3">
             <Button variant="outline" type="button" onClick={onClose}>Cancelar</Button>
-            <Button type="submit" disabled={sending || !selectedAccount}>
-              {sending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button type="submit" disabled={sendEmail.isPending || !selectedAccount}>
+              {sendEmail.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Enviar
             </Button>
           </div>
