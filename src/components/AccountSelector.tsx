@@ -1,8 +1,13 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { EmailAccount } from '@/data/mockData';
+
+interface AccountSelectorAccount {
+  id: string;
+  friendly_name: string;
+  email_address: string;
+}
 
 interface AccountSelectorProps {
-  accounts: EmailAccount[];
+  accounts: AccountSelectorAccount[];
   value: string;
   onValueChange: (value: string) => void;
 }
