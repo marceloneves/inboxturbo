@@ -1,44 +1,65 @@
 
 
-## Arquivar E-mails via IMAP (sem banco de dados)
+# Plano: Dark Mode + Estatísticas + Stripe
 
-Sim, é possível. O protocolo IMAP suporta mover mensagens entre pastas diretamente no servidor de e-mail. Arquivar = mover o e-mail da Inbox para a pasta "Archive" (ou equivalente) no servidor remoto.
+## 1. Dark Mode
 
-### Como funciona
+O CSS já possui variáveis `.dark` definidas em `index.css`. Falta apenas o mecanismo de toggle.
 
-O fluxo é idêntico ao de exclusão que já existe (`delete-email`): conectar via IMAP, abrir a pasta de origem e mover a mensagem para a pasta de arquivo. Nenhum dado é armazenado localmente.
+**Ações:**
+- Criar hook `useTheme` que lê/grava a preferência do `user_preferences.theme` e aplica/remove a classe `dark` no `<html>`
+- Adicionar botão de toggle (ícone sol/lua) no `AppSidebar` e na `SettingsPage`
+- Sincronizar com `localStorage` para aplicação imediata antes do fetch do banco
 
-### Plano de implementação
+**Arquivos:** novo `src/hooks/useTheme.ts`, editar `AppSidebar.tsx`, `SettingsPage.tsx`, `index.html` (script inline para evitar flash)
 
-**1. Criar Edge Function `archive-email`**
-- Baseada na estrutura do `delete-email/index.ts` existente
-- Em vez de mover para Trash, move para a pasta de arquivo do servidor
-- Tenta pastas comuns: `[Gmail]/Todos os e-mails`, `[Gmail]/All Mail`, `Archive`, `INBOX.Archive`
-- Recebe `account_id`, `uid`, `folder` (origem)
+---
 
-**2. Criar hook `useArchiveEmail`**
-- Similar ao `useDeleteEmail.ts`
-- Invoca a função `archive-email`
-- Invalida o cache de e-mails após sucesso
-- Tratamento de erro amigável
+## 2. Dashboard de Estatísticas
 
-**3. Adicionar botão "Arquivar" no `EmailViewer.tsx`**
-- Ícone `Archive` do lucide-react ao lado dos botões Responder/Excluir
-- Estado de loading durante a operação
-- Após arquivar, volta para a lista
+Como os e-mails não são persistidos no banco (são buscados via IMAP em tempo real), as estatísticas serão coletadas no momento da busca e armazenadas numa nova tabela.
 
-**4. Adicionar pasta "Arquivo" na navegação**
-- Nova rota `/app/arquivo` no `AppLayout`/router
-- Novo `NavLink` na sidebar com ícone Archive
-- `MailPage` com `folder='archive'`
-- Mapeamento da pasta IMAP no `fetch-emails` para buscar e-mails arquivados
+**Ações:**
+- Criar tabela `email_stats` via migração:
+  - `id`, `user_id`, `account_id`, `date` (DATE), `received_count`, `sent_count`, `avg_response_time_minutes`, `top_senders` (JSONB), `created_at`
+  - RLS: usuário só vê os próprios dados
+- Criar edge function `collect-stats` que, para cada conta, conecta via IMAP e calcula volume diário, top remetentes e tempo médio de resposta, salvando em `email_stats`
+- Criar página `StatsPage` com 4 cards + gráficos usando Recharts (já disponível via chart.tsx):
+  - **Volume de e-mails**: gráfico de barras recebidos vs enviados por dia/semana
+  - **Tempo de resposta**: gráfico de linha com média por dia
+  - **Top remetentes**: lista ranqueada com barras horizontais
+  - **E-mails por conta**: gráfico de pizza/donut
+- Adicionar rota `/app/estatisticas` e link no sidebar com ícone `BarChart3`
+- Botão "Atualizar estatísticas" que invoca a edge function
 
-**5. Adicionar diálogo de confirmação**
-- Reutilizar o `ConfirmDialog` existente antes de arquivar
+---
 
-### Arquivos envolvidos
-- **Novo:** `supabase/functions/archive-email/index.ts`
-- **Novo:** `src/hooks/useArchiveEmail.ts`
-- **Editados:** `EmailViewer.tsx`, `MailPage.tsx`, `AppSidebar.tsx`, `App.tsx` (rotas)
-- **Editado:** `supabase/functions/fetch-emails/index.ts` (mapeamento da pasta archive)
+## 3. Integração Stripe (Assinatura Mensal/Anual)
+
+**Ações:**
+- Habilitar Stripe via ferramenta `stripe--enable` (coleta a secret key automaticamente)
+- Após habilitação, seguir o fluxo nativo do Lovable Stripe para:
+  - Criar produtos (ex: Plano Pro mensal, Plano Pro anual)
+  - Criar página de pricing `/app/planos` com cards de planos
+  - Criar edge function para checkout session e webhook
+  - Criar tabela `subscriptions` para rastrear status do usuário
+  - Adicionar lógica de gating: verificar se o usuário tem assinatura ativa antes de liberar funcionalidades premium (ex: mais de 2 contas, estatísticas avançadas)
+  - Adicionar badge "Pro" no sidebar e opção de gerenciar assinatura no perfil
+
+---
+
+## Ordem de Implementação
+
+1. Dark mode (menor escopo, impacto visual imediato)
+2. Tabela + edge function + página de estatísticas
+3. Integração Stripe (requer habilitação e configuração externa)
+
+---
+
+## Detalhes Técnicos
+
+- **Migração SQL** para `email_stats` com RLS por `user_id`
+- **Recharts** já está disponível no projeto (componente `chart.tsx`)
+- **Stripe** será habilitado via ferramenta nativa do Lovable, que gerencia secrets e webhooks automaticamente
+- **Theme** usa classe `dark` no `<html>` — todas as variáveis CSS já estão definidas
 
