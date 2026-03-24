@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Loader2, X } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -10,7 +11,6 @@ import { AccountSelector } from '@/components/AccountSelector';
 import { useEmailAccounts } from '@/hooks/useEmailAccounts';
 import { useSendEmail } from '@/hooks/useSendEmail';
 import { toast } from 'sonner';
-import { useState } from 'react';
 
 const composeSchema = z.object({
   to: z.string().email('E-mail inválido').max(255),
@@ -37,6 +37,13 @@ export function ComposeInline({ onClose }: ComposeInlineProps) {
 
   const defaultAccount = displayAccounts.find((a) => a.is_default_sender) || displayAccounts[0];
   const [selectedAccount, setSelectedAccount] = useState(defaultAccount?.id || '');
+
+  useEffect(() => {
+    if (!selectedAccount && displayAccounts.length > 0) {
+      const def = displayAccounts.find((a) => a.is_default_sender) || displayAccounts[0];
+      if (def) setSelectedAccount(def.id);
+    }
+  }, [displayAccounts, selectedAccount]);
 
   const { register, handleSubmit, formState: { errors }, reset } = useForm({
     resolver: zodResolver(composeSchema),
