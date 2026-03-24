@@ -80,11 +80,11 @@ export function EmailListItem({ email, isActive, isPinned, labels, onClick }: Em
         <div className="mt-1 flex items-center gap-2">
           <AccountBadge name={email.account_name} />
           {labels && labels.length > 0 && (
-            <div className="flex gap-1 flex-wrap">
+            <div className="flex gap-1.5 flex-wrap">
               {labels.map((label) => (
                 <span
                   key={label.id}
-                  className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-semibold text-white leading-none"
+                  className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold text-white leading-none"
                   style={{ backgroundColor: label.color }}
                 >
                   {label.name}
