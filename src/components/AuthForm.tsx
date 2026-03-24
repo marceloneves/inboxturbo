@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -40,6 +40,7 @@ interface AuthFormProps {
   onSubmit: (data: Record<string, string>) => Promise<void>;
   error?: string | null;
   success?: string | null;
+  auxiliaryContent?: ReactNode;
 }
 
 const schemas = { login: loginSchema, signup: signupSchema, forgot: forgotSchema, reset: resetSchema };
@@ -58,7 +59,7 @@ const buttonLabels: Record<FormMode, string> = {
   reset: 'Redefinir senha',
 };
 
-export function AuthForm({ mode, onSubmit, error, success }: AuthFormProps) {
+export function AuthForm({ mode, onSubmit, error, success, auxiliaryContent }: AuthFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -96,6 +97,7 @@ export function AuthForm({ mode, onSubmit, error, success }: AuthFormProps) {
           {success && (
             <div className="mb-4 rounded-lg bg-success/10 p-3 text-sm text-success">{success}</div>
           )}
+          {auxiliaryContent && <div className="mb-4">{auxiliaryContent}</div>}
 
           <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
             {mode === 'signup' && (
