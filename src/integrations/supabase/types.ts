@@ -106,6 +106,7 @@ export type Database = {
           created_at: string
           default_email_account_id: string | null
           density: string
+          fetch_interval_seconds: number
           id: string
           theme: string
           updated_at: string
@@ -115,6 +116,7 @@ export type Database = {
           created_at?: string
           default_email_account_id?: string | null
           density?: string
+          fetch_interval_seconds?: number
           id?: string
           theme?: string
           updated_at?: string
@@ -124,6 +126,7 @@ export type Database = {
           created_at?: string
           default_email_account_id?: string | null
           density?: string
+          fetch_interval_seconds?: number
           id?: string
           theme?: string
           updated_at?: string

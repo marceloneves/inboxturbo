@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useEmailAccounts } from './useEmailAccounts';
+import { useUserPreferences } from './useUserPreferences';
 
 export interface RemoteEmail {
   uid: number;
@@ -20,6 +21,7 @@ export interface RemoteEmail {
 
 export function useEmails(folder: string) {
   const { accounts } = useEmailAccounts();
+  const { fetchIntervalMs } = useUserPreferences();
   const queryClient = useQueryClient();
 
   const query = useQuery({
@@ -56,7 +58,7 @@ export function useEmails(folder: string) {
       return allEmails;
     },
     enabled: accounts.length > 0,
-    refetchInterval: 60000, // Refresh every minute
+    refetchInterval: fetchIntervalMs,
   });
 
   const fetchEmailBody = async (accountId: string, uid: number): Promise<RemoteEmail | null> => {
