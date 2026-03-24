@@ -58,7 +58,7 @@ export function useEmails(folder: string) {
       return allEmails;
     },
     enabled: accounts.length > 0,
-    refetchInterval: 60000, // Refresh every minute
+    refetchInterval: fetchIntervalMs,
   });
 
   const fetchEmailBody = async (accountId: string, uid: number): Promise<RemoteEmail | null> => {
