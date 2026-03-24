@@ -50,7 +50,7 @@ export default function MailPage({ folder }: MailPageProps) {
   const [loadingBody, setLoadingBody] = useState(false);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
-  const bodyCache = useRef<Map<string, { body: string; to: string[]; cc?: string[] }>>(new Map());
+  const bodyCache = useRef<Map<string, { body: string; to: string[]; cc?: string[]; attachments?: EmailAttachment[] }>>(new Map());
 
   const convertedEmails: Email[] = useMemo(() => {
     return remoteEmails
