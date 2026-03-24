@@ -1,16 +1,20 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Inbox, Send, Trash2, Archive, Link2, UserCircle, Settings, LogOut, Mail, Menu, X, BarChart3, Sun, Moon, Crown } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
+import { useMoveEmail } from '@/hooks/useMoveEmail';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
-const navItems = [
-  { label: 'Caixa de entrada', icon: Inbox, path: '/app/inbox' },
-  { label: 'Enviados', icon: Send, path: '/app/sent' },
-  { label: 'Arquivo', icon: Archive, path: '/app/arquivo' },
-  { label: 'Lixeira', icon: Trash2, path: '/app/trash' },
+const folderItems = [
+  { label: 'Caixa de entrada', icon: Inbox, path: '/app/inbox', folder: 'inbox' },
+  { label: 'Enviados', icon: Send, path: '/app/sent', folder: 'sent' },
+  { label: 'Arquivo', icon: Archive, path: '/app/arquivo', folder: 'archive' },
+  { label: 'Lixeira', icon: Trash2, path: '/app/trash', folder: 'trash' },
+];
+
+const otherItems = [
   { label: 'Estatísticas', icon: BarChart3, path: '/app/estatisticas' },
   { label: 'Contas conectadas', icon: Link2, path: '/app/contas' },
   { label: 'Perfil', icon: UserCircle, path: '/app/perfil' },
