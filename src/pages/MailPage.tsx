@@ -31,9 +31,11 @@ export default function MailPage({ folder }: MailPageProps) {
   const { emails: remoteEmails, isLoading: emailsLoading, fetchEmailBody } = useEmails(folder);
   const deleteEmail = useDeleteEmail();
   const archiveEmail = useArchiveEmail();
+  const emptyTrash = useEmptyTrash();
 
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [emptyTrashConfirm, setEmptyTrashConfirm] = useState(false);
   const [filterAccount, setFilterAccount] = useState<string>('all');
   const [loadingBody, setLoadingBody] = useState(false);
 
