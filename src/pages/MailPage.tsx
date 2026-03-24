@@ -20,7 +20,7 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/componen
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import type { Email } from '@/types/email';
+import type { Email, EmailAttachment } from '@/types/email';
 
 interface MailPageProps {
   folder: 'inbox' | 'sent' | 'archive' | 'trash';
