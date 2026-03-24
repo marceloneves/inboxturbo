@@ -1,42 +1,35 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useI18n } from '@/i18n';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Check, Crown, Loader2, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const plans = [
-  {
-    id: 'pro_monthly',
-    name: 'Pro Mensal',
-    price: 'R$ 29',
-    period: '/mês',
-    features: [
-      'Contas ilimitadas',
-      'Estatísticas avançadas',
-      'Suporte prioritário',
-      'Intervalo de busca a partir de 30s',
-    ],
-  },
-  {
-    id: 'pro_annual',
-    name: 'Pro Anual',
-    price: 'R$ 249',
-    period: '/ano',
-    badge: 'Economia de 28%',
-    features: [
-      'Tudo do plano mensal',
-      'Economia de R$ 99/ano',
-      'Acesso antecipado a novidades',
-      'Intervalo de busca a partir de 30s',
-    ],
-  },
-];
-
 export default function PlansPage() {
   const { isPro, subscription } = useSubscription();
+  const { t } = useI18n();
   const [loading, setLoading] = useState<string | null>(null);
+
+  const plans = [
+    {
+      id: 'free',
+      name: t.plans.free.name,
+      price: t.plans.free.price,
+      period: t.plans.free.period,
+      features: t.plans.free.features,
+      isFree: true,
+    },
+    {
+      id: 'pro_monthly',
+      name: t.plans.pro.name,
+      price: t.plans.pro.price,
+      period: t.plans.pro.period,
+      features: t.plans.pro.features,
+      isFree: false,
+    },
+  ];
 
   const handleCheckout = async (planId: string) => {
     setLoading(planId);
@@ -49,7 +42,7 @@ export default function PlansPage() {
         window.location.href = data.url;
       }
     } catch (err: any) {
-      toast.error(err.message || 'Erro ao iniciar checkout');
+      toast.error(err.message || t.plans.checkoutError);
     } finally {
       setLoading(null);
     }
@@ -66,7 +59,7 @@ export default function PlansPage() {
         window.location.href = data.url;
       }
     } catch (err: any) {
-      toast.error(err.message || 'Erro ao abrir portal');
+      toast.error(err.message || t.plans.portalError);
     } finally {
       setLoading(null);
     }
@@ -77,29 +70,27 @@ export default function PlansPage() {
       <div className="text-center">
         <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary mb-4">
           <Crown className="h-4 w-4" />
-          Planos
+          {t.sidebar.plans}
         </div>
-        <h1 className="text-3xl font-bold">Escolha seu plano</h1>
-        <p className="text-muted-foreground mt-2">
-          Desbloqueie todo o potencial do inboxTurbo
-        </p>
+        <h1 className="text-3xl font-bold">{t.plans.title}</h1>
+        <p className="text-muted-foreground mt-2">{t.plans.subtitle}</p>
       </div>
 
       {isPro && (
         <div className="rounded-xl border-2 border-primary bg-primary/5 p-4 text-center">
           <p className="font-semibold text-primary flex items-center justify-center gap-2">
             <Zap className="h-4 w-4" />
-            Você já é Pro!
+            {t.plans.alreadyPro}
           </p>
           <p className="text-sm text-muted-foreground mt-1">
-            Seu plano está ativo até{' '}
+            {t.plans.planActiveUntil}{' '}
             {subscription?.current_period_end
-              ? new Date(subscription.current_period_end).toLocaleDateString('pt-BR')
+              ? new Date(subscription.current_period_end).toLocaleDateString()
               : '—'}
           </p>
           <Button variant="outline" size="sm" className="mt-3" onClick={handlePortal} disabled={loading === 'portal'}>
             {loading === 'portal' && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Gerenciar assinatura
+            {t.plans.manageSubscription}
           </Button>
         </div>
       )}
@@ -110,12 +101,12 @@ export default function PlansPage() {
             key={plan.id}
             className={cn(
               'rounded-xl border bg-card p-6 relative',
-              i === 1 && 'border-primary shadow-lg'
+              !plan.isFree && 'border-primary shadow-lg'
             )}
           >
-            {plan.badge && (
+            {!plan.isFree && (
               <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-0.5 text-xs font-semibold text-primary-foreground">
-                {plan.badge}
+                PRO
               </span>
             )}
             <h3 className="font-bold text-lg">{plan.name}</h3>
@@ -131,25 +122,22 @@ export default function PlansPage() {
                 </li>
               ))}
             </ul>
-            <Button
-              className="w-full mt-6"
-              variant={i === 1 ? 'default' : 'outline'}
-              onClick={() => handleCheckout(plan.id)}
-              disabled={isPro || loading === plan.id}
-            >
-              {loading === plan.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isPro ? 'Plano ativo' : 'Assinar agora'}
-            </Button>
+            {plan.isFree ? (
+              <Button className="w-full mt-6" variant="outline" disabled>
+                {t.plans.activePlan}
+              </Button>
+            ) : (
+              <Button
+                className="w-full mt-6"
+                onClick={() => handleCheckout(plan.id)}
+                disabled={isPro || loading === plan.id}
+              >
+                {loading === plan.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isPro ? t.plans.activePlan : t.plans.subscribe}
+              </Button>
+            )}
           </div>
         ))}
-      </div>
-
-      {/* Free tier info */}
-      <div className="rounded-xl border bg-card p-6 text-center">
-        <h3 className="font-semibold">Plano Gratuito</h3>
-        <p className="text-sm text-muted-foreground mt-1">
-          Até 2 contas conectadas • Intervalo mínimo de 5 min • Estatísticas básicas
-        </p>
       </div>
     </div>
   );

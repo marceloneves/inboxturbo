@@ -1,24 +1,31 @@
 import { format, isToday, isYesterday } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { Paperclip } from 'lucide-react';
+import { enUS, es as esLocale, ptBR } from 'date-fns/locale';
+import { Paperclip, Pin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AccountBadge } from '@/components/AccountBadge';
+import { useI18n } from '@/i18n';
 import type { Email } from '@/types/email';
 
 interface EmailListItemProps {
   email: Email;
   isActive: boolean;
+  isPinned?: boolean;
+  labelColors?: string[];
   onClick: () => void;
 }
 
-function formatEmailDate(dateStr: string) {
-  const date = new Date(dateStr);
-  if (isToday(date)) return format(date, 'HH:mm');
-  if (isYesterday(date)) return 'Ontem';
-  return format(date, 'dd MMM', { locale: ptBR });
-}
+const dateLocales = { en: enUS, es: esLocale, pt: ptBR };
 
-export function EmailListItem({ email, isActive, onClick }: EmailListItemProps) {
+export function EmailListItem({ email, isActive, isPinned, labelColors, onClick }: EmailListItemProps) {
+  const { locale, t } = useI18n();
+
+  function formatEmailDate(dateStr: string) {
+    const date = new Date(dateStr);
+    if (isToday(date)) return format(date, 'HH:mm');
+    if (isYesterday(date)) return t.mail.yesterday;
+    return format(date, 'dd MMM', { locale: dateLocales[locale] });
+  }
+
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData('application/x-email-id', email.id);
     e.dataTransfer.setData('application/x-email-folder', email.folder);
@@ -42,6 +49,7 @@ export function EmailListItem({ email, isActive, onClick }: EmailListItemProps) 
             {email.from}
           </span>
           <div className="flex items-center gap-1.5 shrink-0">
+            {isPinned && <Pin className="h-3 w-3 text-primary fill-primary" />}
             {email.has_attachments && <Paperclip className="h-3 w-3 text-muted-foreground" />}
             <span className="text-xs text-muted-foreground">{formatEmailDate(email.date)}</span>
           </div>
@@ -51,6 +59,13 @@ export function EmailListItem({ email, isActive, onClick }: EmailListItemProps) 
         </p>
         <div className="mt-1 flex items-center gap-2">
           <AccountBadge name={email.account_name} />
+          {labelColors && labelColors.length > 0 && (
+            <div className="flex gap-0.5">
+              {labelColors.map((color, i) => (
+                <div key={i} className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+              ))}
+            </div>
+          )}
           <span className="truncate text-xs text-muted-foreground">{email.preview}</span>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useI18n } from '@/i18n';
 
 interface AccountSelectorAccount {
   id: string;
@@ -13,10 +14,12 @@ interface AccountSelectorProps {
 }
 
 export function AccountSelector({ accounts, value, onValueChange }: AccountSelectorProps) {
+  const { t } = useI18n();
+
   return (
     <Select value={value} onValueChange={onValueChange}>
       <SelectTrigger className="w-full">
-        <SelectValue placeholder="Selecionar conta de envio" />
+        <SelectValue placeholder={t.compose.selectAccount} />
       </SelectTrigger>
       <SelectContent>
         {accounts.map((acc) => (

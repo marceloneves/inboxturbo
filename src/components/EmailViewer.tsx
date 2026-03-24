@@ -1,9 +1,18 @@
 import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { ArrowLeft, Trash2, Reply, Paperclip, Loader2, Archive } from 'lucide-react';
+import { enUS, es as esLocale, ptBR } from 'date-fns/locale';
+import { ArrowLeft, Trash2, Reply, Paperclip, Loader2, Archive, Pin, PinOff, Tag } from 'lucide-react';
 import { AccountBadge } from '@/components/AccountBadge';
 import { Button } from '@/components/ui/button';
 import { ReplyInline } from '@/components/ReplyInline';
+import { useI18n } from '@/i18n';
+import { useLabels, type EmailLabel } from '@/hooks/useLabels';
+import { usePinnedEmails } from '@/hooks/usePinnedEmails';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import type { Email } from '@/types/email';
 import { useState } from 'react';
 
@@ -16,8 +25,40 @@ interface EmailViewerProps {
   isArchiving?: boolean;
 }
 
+const dateLocales = { en: enUS, es: esLocale, pt: ptBR };
+const dateFormats = {
+  en: "MMMM d, yyyy 'at' HH:mm",
+  es: "d 'de' MMMM 'de' yyyy 'a las' HH:mm",
+  pt: "dd 'de' MMMM 'de' yyyy 'às' HH:mm",
+};
+
 export function EmailViewer({ email, onBack, onDelete, onArchive, isDeleting, isArchiving }: EmailViewerProps) {
   const [replying, setReplying] = useState(false);
+  const { t, locale } = useI18n();
+  const { labels, getLabelsForEmail, assignLabel, removeAssignment } = useLabels();
+  const { isPinned, pinEmail, unpinEmail } = usePinnedEmails();
+
+  const [accountId, uidStr] = email.id.split('::');
+  const uid = parseInt(uidStr);
+  const emailIsPinned = isPinned(accountId, uid);
+  const emailLabels = getLabelsForEmail(accountId, uid);
+  const emailLabelIds = emailLabels.map((l) => l.id);
+
+  const togglePin = () => {
+    if (emailIsPinned) {
+      unpinEmail.mutate({ account_id: accountId, email_uid: uid });
+    } else {
+      pinEmail.mutate({ account_id: accountId, email_uid: uid });
+    }
+  };
+
+  const toggleLabel = (label: EmailLabel) => {
+    if (emailLabelIds.includes(label.id)) {
+      removeAssignment.mutate({ account_id: accountId, email_uid: uid, label_id: label.id });
+    } else {
+      assignLabel.mutate({ account_id: accountId, email_uid: uid, label_id: label.id });
+    }
+  };
 
   return (
     <div className="flex h-full flex-col animate-fade-in">
@@ -26,37 +67,47 @@ export function EmailViewer({ email, onBack, onDelete, onArchive, isDeleting, is
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1" />
+
+        {/* Pin button */}
+        <Button variant="ghost" size="sm" onClick={togglePin}>
+          {emailIsPinned ? <PinOff className="h-4 w-4 mr-1" /> : <Pin className="h-4 w-4 mr-1" />}
+          {emailIsPinned ? t.mail.unpin : t.mail.pin}
+        </Button>
+
+        {/* Labels dropdown */}
+        {labels.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm">
+                <Tag className="h-4 w-4 mr-1" /> {t.labels.assignLabel}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              {labels.map((label) => (
+                <DropdownMenuItem key={label.id} onClick={() => toggleLabel(label)}>
+                  <div className="flex items-center gap-2 w-full">
+                    <div className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: label.color }} />
+                    <span className="flex-1">{label.name}</span>
+                    {emailLabelIds.includes(label.id) && <span className="text-primary text-xs">✓</span>}
+                  </div>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+
         <Button variant="ghost" size="sm" onClick={() => setReplying(true)} disabled={replying}>
-          <Reply className="h-4 w-4 mr-1" /> Responder
+          <Reply className="h-4 w-4 mr-1" /> {t.reply.reply}
         </Button>
         {onArchive && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onArchive(email.id)}
-            disabled={isArchiving}
-          >
-            {isArchiving ? (
-              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-            ) : (
-              <Archive className="h-4 w-4 mr-1" />
-            )}
-            Arquivar
+          <Button variant="ghost" size="sm" onClick={() => onArchive(email.id)} disabled={isArchiving}>
+            {isArchiving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Archive className="h-4 w-4 mr-1" />}
+            {t.reply.archive}
           </Button>
         )}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => onDelete(email.id)}
-          className="text-destructive hover:text-destructive"
-          disabled={isDeleting}
-        >
-          {isDeleting ? (
-            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-          ) : (
-            <Trash2 className="h-4 w-4 mr-1" />
-          )}
-          Excluir
+        <Button variant="ghost" size="sm" onClick={() => onDelete(email.id)} className="text-destructive hover:text-destructive" disabled={isDeleting}>
+          {isDeleting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Trash2 className="h-4 w-4 mr-1" />}
+          {t.reply.delete}
         </Button>
       </div>
 
@@ -64,6 +115,22 @@ export function EmailViewer({ email, onBack, onDelete, onArchive, isDeleting, is
         <div className="p-6">
           <div className="max-w-2xl">
             <h2 className="text-xl font-semibold" style={{ lineHeight: '1.2' }}>{email.subject}</h2>
+
+            {/* Labels display */}
+            {emailLabels.length > 0 && (
+              <div className="mt-2 flex gap-1.5 flex-wrap">
+                {emailLabels.map((label) => (
+                  <span
+                    key={label.id}
+                    className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium text-white"
+                    style={{ backgroundColor: label.color }}
+                  >
+                    {label.name}
+                  </span>
+                ))}
+              </div>
+            )}
+
             <div className="mt-4 flex items-start gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-semibold">
                 {email.from.charAt(0)}
@@ -75,11 +142,11 @@ export function EmailViewer({ email, onBack, onDelete, onArchive, isDeleting, is
                   <AccountBadge name={email.account_name} />
                 </div>
                 <div className="mt-0.5 text-xs text-muted-foreground">
-                  <span>Para: {email.to.join(', ')}</span>
-                  {email.cc && email.cc.length > 0 && <span className="ml-2">Cc: {email.cc.join(', ')}</span>}
+                  <span>{t.mail.to}: {email.to.join(', ')}</span>
+                  {email.cc && email.cc.length > 0 && <span className="ml-2">{t.mail.cc}: {email.cc.join(', ')}</span>}
                 </div>
                 <span className="text-xs text-muted-foreground">
-                  {format(new Date(email.date), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}
+                  {format(new Date(email.date), dateFormats[locale], { locale: dateLocales[locale] })}
                 </span>
               </div>
             </div>
@@ -87,7 +154,7 @@ export function EmailViewer({ email, onBack, onDelete, onArchive, isDeleting, is
             {email.has_attachments && (
               <div className="mt-4 flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2">
                 <Paperclip className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Anexos disponíveis</span>
+                <span className="text-sm text-muted-foreground">{t.mail.attachmentsAvailable}</span>
               </div>
             )}
 
@@ -99,10 +166,7 @@ export function EmailViewer({ email, onBack, onDelete, onArchive, isDeleting, is
         </div>
 
         {replying && (
-          <ReplyInline
-            originalEmail={email}
-            onClose={() => setReplying(false)}
-          />
+          <ReplyInline originalEmail={email} onClose={() => setReplying(false)} />
         )}
       </div>
     </div>
