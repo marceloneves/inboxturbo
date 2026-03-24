@@ -88,9 +88,8 @@ export default function MailPage({ folder }: MailPageProps) {
   };
 
   const handleDelete = async (emailId: string) => {
-    const parts = emailId.split('-');
-    const accountId = parts[0];
-    const uid = parseInt(parts.slice(1).join('-'));
+    const [accountId, uidStr] = emailId.split('::');
+    const uid = parseInt(uidStr);
 
     try {
       await deleteEmail.mutateAsync({ account_id: accountId, uid, folder });
