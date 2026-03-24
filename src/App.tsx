@@ -44,6 +44,7 @@ const App = () => (
               <Route path="perfil" element={<ProfilePage />} />
               <Route path="configuracoes" element={<SettingsPage />} />
               <Route path="estatisticas" element={<StatsPage />} />
+              <Route path="planos" element={<PlansPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
