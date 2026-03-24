@@ -132,15 +132,15 @@ export default function MailPage({ folder }: MailPageProps) {
       email = { ...email, is_read: true };
     }
     const cached = bodyCache.current.get(email.id);
-    if (cached) { setSelectedEmail({ ...email, body: cached.body, to: cached.to, cc: cached.cc }); return; }
+    if (cached) { setSelectedEmail({ ...email, body: cached.body, to: cached.to, cc: cached.cc, attachments: cached.attachments }); return; }
     if (email.body && email.body.length > 0) { setSelectedEmail(email); return; }
     setSelectedEmail({ ...email, body: `<p>${t.common.loading}</p>` });
     setLoadingBody(true);
     const fullEmail = await fetchEmailBody(accountId, uid);
     if (fullEmail) {
       const body = fullEmail.body || '<p>—</p>';
-      bodyCache.current.set(email.id, { body, to: fullEmail.to, cc: fullEmail.cc });
-      setSelectedEmail({ ...email, body, to: fullEmail.to, cc: fullEmail.cc });
+      bodyCache.current.set(email.id, { body, to: fullEmail.to, cc: fullEmail.cc, attachments: fullEmail.attachments });
+      setSelectedEmail({ ...email, body, to: fullEmail.to, cc: fullEmail.cc, attachments: fullEmail.attachments });
     } else {
       setSelectedEmail({ ...email, body: '<p>—</p>' });
     }

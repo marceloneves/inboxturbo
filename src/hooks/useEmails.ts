@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useEmailAccounts } from './useEmailAccounts';
 import { useUserPreferences } from './useUserPreferences';
+import type { EmailAttachment } from '@/types/email';
 
 export interface RemoteEmail {
   uid: number;
@@ -17,6 +18,7 @@ export interface RemoteEmail {
   has_attachments: boolean;
   account_id: string;
   account_name: string;
+  attachments?: EmailAttachment[];
 }
 
 export function useEmails(folder: string) {
@@ -53,7 +55,6 @@ export function useEmails(folder: string) {
         }
       }
 
-      // Sort by date descending
       allEmails.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       return allEmails;
     },
