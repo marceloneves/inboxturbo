@@ -11,6 +11,7 @@ const navItems = [
   { label: 'Enviados', icon: Send, path: '/app/sent' },
   { label: 'Arquivo', icon: Archive, path: '/app/arquivo' },
   { label: 'Lixeira', icon: Trash2, path: '/app/trash' },
+  { label: 'Estatísticas', icon: BarChart3, path: '/app/estatisticas' },
   { label: 'Contas conectadas', icon: Link2, path: '/app/contas' },
   { label: 'Perfil', icon: UserCircle, path: '/app/perfil' },
   { label: 'Configurações', icon: Settings, path: '/app/configuracoes' },
