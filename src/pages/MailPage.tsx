@@ -162,7 +162,7 @@ export default function MailPage({ folder }: MailPageProps) {
     setSelectedEmail(null);
   };
 
-  const folderLabels = { inbox: 'Caixa de entrada', sent: 'Enviados', trash: 'Lixeira' };
+  const folderLabels: Record<string, string> = { inbox: 'Caixa de entrada', sent: 'Enviados', archive: 'Arquivo', trash: 'Lixeira' };
   const isLoading = accountsLoading || emailsLoading;
   const showViewer = selectedEmail || composing;
 
