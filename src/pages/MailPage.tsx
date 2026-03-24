@@ -148,29 +148,35 @@ export default function MailPage({ folder }: MailPageProps) {
     const [accountId, uidStr] = emailId.split('::');
     const uid = parseInt(uidStr);
 
-    try {
-      await deleteEmail.mutateAsync({ account_id: accountId, uid, folder });
-    } catch {
-      // Error handled by mutation
-    }
-
+    // Instantly remove from UI
+    setRemovedIds((prev) => new Set(prev).add(emailId));
     bodyCache.current.delete(emailId);
     setSelectedEmail(null);
     setDeleteTarget(null);
+
+    try {
+      await deleteEmail.mutateAsync({ account_id: accountId, uid, folder });
+    } catch {
+      // Revert on error
+      setRemovedIds((prev) => { const next = new Set(prev); next.delete(emailId); return next; });
+    }
   };
 
   const handleArchive = async (emailId: string) => {
     const [accountId, uidStr] = emailId.split('::');
     const uid = parseInt(uidStr);
 
+    // Instantly remove from UI
+    setRemovedIds((prev) => new Set(prev).add(emailId));
+    bodyCache.current.delete(emailId);
+    setSelectedEmail(null);
+
     try {
       await archiveEmail.mutateAsync({ account_id: accountId, uid, folder });
     } catch {
-      // Error handled by mutation
+      // Revert on error
+      setRemovedIds((prev) => { const next = new Set(prev); next.delete(emailId); return next; });
     }
-
-    bodyCache.current.delete(emailId);
-    setSelectedEmail(null);
   };
 
   const handleEmptyTrash = async () => {
