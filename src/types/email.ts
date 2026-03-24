@@ -17,7 +17,7 @@ export interface Email {
   cc?: string[];
   subject: string;
   preview: string;
-  body: string;
+  body?: string;
   date: string;
   is_read: boolean;
   folder: 'inbox' | 'sent' | 'trash';
