@@ -20,7 +20,7 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/componen
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import type { Email } from '@/types/email';
+import type { Email, EmailAttachment } from '@/types/email';
 
 interface MailPageProps {
   folder: 'inbox' | 'sent' | 'archive' | 'trash';
@@ -50,7 +50,7 @@ export default function MailPage({ folder }: MailPageProps) {
   const [loadingBody, setLoadingBody] = useState(false);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
-  const bodyCache = useRef<Map<string, { body: string; to: string[]; cc?: string[] }>>(new Map());
+  const bodyCache = useRef<Map<string, { body: string; to: string[]; cc?: string[]; attachments?: EmailAttachment[] }>>(new Map());
 
   const convertedEmails: Email[] = useMemo(() => {
     return remoteEmails
@@ -132,15 +132,15 @@ export default function MailPage({ folder }: MailPageProps) {
       email = { ...email, is_read: true };
     }
     const cached = bodyCache.current.get(email.id);
-    if (cached) { setSelectedEmail({ ...email, body: cached.body, to: cached.to, cc: cached.cc }); return; }
+    if (cached) { setSelectedEmail({ ...email, body: cached.body, to: cached.to, cc: cached.cc, attachments: cached.attachments }); return; }
     if (email.body && email.body.length > 0) { setSelectedEmail(email); return; }
     setSelectedEmail({ ...email, body: `<p>${t.common.loading}</p>` });
     setLoadingBody(true);
     const fullEmail = await fetchEmailBody(accountId, uid);
     if (fullEmail) {
       const body = fullEmail.body || '<p>—</p>';
-      bodyCache.current.set(email.id, { body, to: fullEmail.to, cc: fullEmail.cc });
-      setSelectedEmail({ ...email, body, to: fullEmail.to, cc: fullEmail.cc });
+      bodyCache.current.set(email.id, { body, to: fullEmail.to, cc: fullEmail.cc, attachments: fullEmail.attachments });
+      setSelectedEmail({ ...email, body, to: fullEmail.to, cc: fullEmail.cc, attachments: fullEmail.attachments });
     } else {
       setSelectedEmail({ ...email, body: '<p>—</p>' });
     }

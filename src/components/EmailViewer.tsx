@@ -1,19 +1,21 @@
 import { format } from 'date-fns';
 import { enUS, es as esLocale, ptBR } from 'date-fns/locale';
-import { ArrowLeft, Trash2, Reply, Paperclip, Loader2, Archive, Pin, PinOff, Tag } from 'lucide-react';
+import { ArrowLeft, Trash2, Reply, Paperclip, Loader2, Archive, Pin, PinOff, Tag, Download } from 'lucide-react';
 import { AccountBadge } from '@/components/AccountBadge';
 import { Button } from '@/components/ui/button';
 import { ReplyInline } from '@/components/ReplyInline';
 import { useI18n } from '@/i18n';
 import { useLabels, type EmailLabel } from '@/hooks/useLabels';
 import { usePinnedEmails } from '@/hooks/usePinnedEmails';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { Email } from '@/types/email';
+import type { Email, EmailAttachment } from '@/types/email';
 import { useState } from 'react';
 
 interface EmailViewerProps {
@@ -32,8 +34,15 @@ const dateFormats = {
   pt: "dd 'de' MMMM 'de' yyyy 'às' HH:mm",
 };
 
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export function EmailViewer({ email, onBack, onDelete, onArchive, isDeleting, isArchiving }: EmailViewerProps) {
   const [replying, setReplying] = useState(false);
+  const [downloadingPart, setDownloadingPart] = useState<string | null>(null);
   const { t, locale } = useI18n();
   const { labels, getLabelsForEmail, assignLabel, removeAssignment } = useLabels();
   const { isPinned, pinEmail, unpinEmail } = usePinnedEmails();
@@ -57,6 +66,37 @@ export function EmailViewer({ email, onBack, onDelete, onArchive, isDeleting, is
       removeAssignment.mutate({ account_id: accountId, email_uid: uid, label_id: label.id });
     } else {
       assignLabel.mutate({ account_id: accountId, email_uid: uid, label_id: label.id });
+    }
+  };
+
+  const handleDownloadAttachment = async (att: EmailAttachment) => {
+    setDownloadingPart(att.part);
+    try {
+      const { data, error } = await supabase.functions.invoke('download-attachment', {
+        body: { account_id: accountId, folder: email.folder, uid, part: att.part },
+      });
+      if (error || !data?.data) {
+        toast.error('Erro ao baixar anexo');
+        return;
+      }
+      const byteString = atob(data.data);
+      const ab = new Uint8Array(byteString.length);
+      for (let i = 0; i < byteString.length; i++) {
+        ab[i] = byteString.charCodeAt(i);
+      }
+      const blob = new Blob([ab], { type: att.contentType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = att.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error('Erro ao baixar anexo');
+    } finally {
+      setDownloadingPart(null);
     }
   };
 
@@ -151,7 +191,37 @@ export function EmailViewer({ email, onBack, onDelete, onArchive, isDeleting, is
               </div>
             </div>
 
-            {email.has_attachments && (
+            {/* Attachments */}
+            {email.attachments && email.attachments.length > 0 && (
+              <div className="mt-4 space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Paperclip className="h-4 w-4" />
+                  <span>{t.mail.attachmentsAvailable} ({email.attachments.length})</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {email.attachments.map((att, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleDownloadAttachment(att)}
+                      disabled={downloadingPart === att.part}
+                      className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 hover:bg-muted transition-colors text-left"
+                    >
+                      <Paperclip className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate max-w-[200px]">{att.filename}</p>
+                        <p className="text-xs text-muted-foreground">{formatFileSize(att.size)}</p>
+                      </div>
+                      {downloadingPart === att.part ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />
+                      ) : (
+                        <Download className="h-4 w-4 text-muted-foreground shrink-0" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {email.has_attachments && (!email.attachments || email.attachments.length === 0) && (
               <div className="mt-4 flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2">
                 <Paperclip className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">{t.mail.attachmentsAvailable}</span>

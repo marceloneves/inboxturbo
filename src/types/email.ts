@@ -7,6 +7,13 @@ export interface EmailAccount {
   is_default_sender: boolean;
 }
 
+export interface EmailAttachment {
+  part: string;
+  filename: string;
+  contentType: string;
+  size: number;
+}
+
 export interface Email {
   id: string;
   account_id: string;
@@ -22,4 +29,5 @@ export interface Email {
   is_read: boolean;
   folder: 'inbox' | 'sent' | 'archive' | 'trash';
   has_attachments?: boolean;
+  attachments?: EmailAttachment[];
 }

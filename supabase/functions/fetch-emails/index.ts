@@ -47,7 +47,6 @@ Deno.serve(async (req) => {
       uid,
     } = await req.json();
 
-    // Get account credentials
     const { data: account, error: accError } = await supabase
       .from("email_accounts")
       .select("*")
@@ -101,51 +100,101 @@ Deno.serve(async (req) => {
 
     // If requesting a specific email by UID
     if (uid) {
-      const rawSource = await client.download(uid.toString(), undefined, {
+      const msg = await client.fetchOne(uid.toString(), {
+        bodyStructure: true,
+        envelope: true,
         uid: true,
       });
-      const chunks: Uint8Array[] = [];
-      for await (const chunk of rawSource.content) {
-        chunks.push(chunk);
-      }
-      const buffer = new Uint8Array(
-        chunks.reduce((acc, c) => acc + c.length, 0)
-      );
-      let offset = 0;
-      for (const chunk of chunks) {
-        buffer.set(chunk, offset);
-        offset += chunk.length;
-      }
 
-      const parsed = await simpleParser(Buffer.from(buffer));
+      const textPartInfo = findTextPart(msg.bodyStructure);
+      const attachments = findAttachmentParts(msg.bodyStructure);
+
+      let body = "";
+
+      if (textPartInfo && textPartInfo.part) {
+        // Download only the text part, skip attachments entirely
+        const rawSource = await client.download(
+          uid.toString(),
+          textPartInfo.part,
+          { uid: true }
+        );
+        const chunks: Uint8Array[] = [];
+        for await (const chunk of rawSource.content) {
+          chunks.push(chunk);
+        }
+        const rawBuffer = Buffer.concat(chunks);
+
+        // Decode transfer encoding
+        const encoding = (textPartInfo.encoding || "7bit").toLowerCase();
+        let decoded: Buffer;
+        if (encoding === "base64") {
+          decoded = Buffer.from(
+            rawBuffer.toString("ascii").replace(/\s/g, ""),
+            "base64"
+          );
+        } else if (encoding === "quoted-printable") {
+          decoded = Buffer.from(
+            decodeQP(rawBuffer.toString("ascii")),
+            "binary"
+          );
+        } else {
+          decoded = rawBuffer;
+        }
+
+        // Decode charset
+        const charset = (textPartInfo.charset || "utf-8").toLowerCase();
+        try {
+          const enc =
+            charset === "iso-8859-1" || charset === "latin1"
+              ? "windows-1252"
+              : charset;
+          body = new TextDecoder(enc).decode(decoded);
+        } catch {
+          body = new TextDecoder("utf-8").decode(decoded);
+        }
+
+        if (textPartInfo.type === "text/plain") {
+          body = `<pre style="white-space:pre-wrap;font-family:inherit;">${body
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")}</pre>`;
+        }
+      } else {
+        // Fallback for simple non-multipart messages
+        const rawSource = await client.download(uid.toString(), undefined, {
+          uid: true,
+        });
+        const chunks: Uint8Array[] = [];
+        for await (const chunk of rawSource.content) {
+          chunks.push(chunk);
+        }
+        const rawBuffer = Buffer.concat(chunks);
+        const parsed = await simpleParser(rawBuffer);
+        body = parsed.html || parsed.textAsHtml || parsed.text || "";
+      }
 
       await client.logout();
 
       const email = {
         uid,
-        from: parsed.from?.text || "",
-        from_email:
-          parsed.from?.value?.[0]?.address || "",
-        to: parsed.to
-          ? (Array.isArray(parsed.to)
-              ? parsed.to
-              : [parsed.to]
-            ).flatMap((t: { value: { address: string }[] }) =>
-              t.value.map((v: { address: string }) => v.address)
-            )
-          : [],
-        cc: parsed.cc
-          ? (Array.isArray(parsed.cc)
-              ? parsed.cc
-              : [parsed.cc]
-            ).flatMap((t: { value: { address: string }[] }) =>
-              t.value.map((v: { address: string }) => v.address)
-            )
-          : [],
-        subject: parsed.subject || "(sem assunto)",
-        body: parsed.html || parsed.textAsHtml || parsed.text || "",
-        date: parsed.date?.toISOString() || "",
-        has_attachments: (parsed.attachments?.length || 0) > 0,
+        from:
+          msg.envelope?.from?.[0]?.name ||
+          msg.envelope?.from?.[0]?.address ||
+          "",
+        from_email: msg.envelope?.from?.[0]?.address || "",
+        to:
+          msg.envelope?.to
+            ?.map((t: { address: string }) => t.address)
+            .filter(Boolean) || [],
+        cc:
+          msg.envelope?.cc
+            ?.map((c: { address: string }) => c.address)
+            .filter(Boolean) || [],
+        subject: msg.envelope?.subject || "(sem assunto)",
+        body,
+        date: msg.envelope?.date?.toISOString() || "",
+        has_attachments: attachments.length > 0,
+        attachments,
       };
 
       return new Response(JSON.stringify({ email }), {
@@ -223,12 +272,17 @@ Deno.serve(async (req) => {
   }
 });
 
+// --- Helpers ---
+
 type MailboxInfo = {
   path: string;
   specialUse?: string | null;
 };
 
-async function resolveMailboxPath(client: ImapFlow, folder: string): Promise<string | null> {
+async function resolveMailboxPath(
+  client: ImapFlow,
+  folder: string
+): Promise<string | null> {
   const mailboxes = (await client.list()) as MailboxInfo[];
   const normalizedFolder = folder.toLowerCase();
 
@@ -241,7 +295,9 @@ async function resolveMailboxPath(client: ImapFlow, folder: string): Promise<str
 
   const specialUse = specialUseMap[normalizedFolder];
   if (specialUse) {
-    const bySpecialUse = mailboxes.find((mailbox) => mailbox.specialUse === specialUse);
+    const bySpecialUse = mailboxes.find(
+      (mailbox) => mailbox.specialUse === specialUse
+    );
     if (bySpecialUse) {
       return bySpecialUse.path;
     }
@@ -251,7 +307,13 @@ async function resolveMailboxPath(client: ImapFlow, folder: string): Promise<str
     inbox: ["inbox"],
     sent: ["sent", "sent items", "enviados"],
     archive: ["archive", "archives", "arquivo", "arquivados"],
-    trash: ["trash", "deleted items", "deleted messages", "lixeira", "papelera"],
+    trash: [
+      "trash",
+      "deleted items",
+      "deleted messages",
+      "lixeira",
+      "papelera",
+    ],
   };
 
   const excluded: Record<string, string[]> = {
@@ -287,10 +349,121 @@ function hasAttachments(bodyStructure: unknown): boolean {
     dispositionParameters?: { filename?: string };
     childNodes?: unknown[];
   };
-  // Only count explicit "attachment" disposition, ignore inline images (signatures, etc.)
   if (bs.disposition === "attachment") return true;
   if (bs.childNodes) {
     return bs.childNodes.some((child) => hasAttachments(child));
   }
   return false;
+}
+
+function findTextPart(
+  bs: unknown
+): {
+  part?: string;
+  type: string;
+  charset?: string;
+  encoding?: string;
+} | null {
+  if (!bs) return null;
+  const node = bs as {
+    type?: string;
+    part?: string;
+    parameters?: { charset?: string };
+    encoding?: string;
+    disposition?: string;
+    childNodes?: unknown[];
+  };
+  const type = (node.type || "").toLowerCase();
+
+  if (type === "text/html") {
+    return {
+      part: node.part,
+      type,
+      charset: node.parameters?.charset,
+      encoding: node.encoding,
+    };
+  }
+  if (type === "text/plain" && node.disposition !== "attachment") {
+    return {
+      part: node.part,
+      type,
+      charset: node.parameters?.charset,
+      encoding: node.encoding,
+    };
+  }
+
+  if (node.childNodes) {
+    let plainPart: {
+      part?: string;
+      type: string;
+      charset?: string;
+      encoding?: string;
+    } | null = null;
+    for (const child of node.childNodes) {
+      const found = findTextPart(child);
+      if (found) {
+        if (found.type === "text/html") return found;
+        if (!plainPart) plainPart = found;
+      }
+    }
+    return plainPart;
+  }
+
+  return null;
+}
+
+function findAttachmentParts(
+  bs: unknown
+): Array<{
+  part: string;
+  filename: string;
+  contentType: string;
+  size: number;
+}> {
+  if (!bs) return [];
+  const node = bs as {
+    type?: string;
+    part?: string;
+    size?: number;
+    disposition?: string;
+    dispositionParameters?: { filename?: string };
+    parameters?: { name?: string };
+    childNodes?: unknown[];
+  };
+
+  const results: Array<{
+    part: string;
+    filename: string;
+    contentType: string;
+    size: number;
+  }> = [];
+
+  if (node.disposition === "attachment") {
+    results.push({
+      part: node.part || "1",
+      filename:
+        node.dispositionParameters?.filename ||
+        node.parameters?.name ||
+        "attachment",
+      contentType: node.type || "application/octet-stream",
+      size: node.size || 0,
+    });
+  }
+
+  if (node.childNodes) {
+    for (const child of node.childNodes) {
+      results.push(...findAttachmentParts(child));
+    }
+  }
+
+  return results;
+}
+
+function decodeQP(str: string): string {
+  return str
+    .replace(/=\r?\n/g, "")
+    .replace(
+      /=([0-9A-Fa-f]{2})/g,
+      (_, hex) => String.fromCharCode(parseInt(hex, 16))
+    );
 }
