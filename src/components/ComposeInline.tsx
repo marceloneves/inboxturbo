@@ -38,6 +38,13 @@ export function ComposeInline({ onClose }: ComposeInlineProps) {
   const defaultAccount = displayAccounts.find((a) => a.is_default_sender) || displayAccounts[0];
   const [selectedAccount, setSelectedAccount] = useState(defaultAccount?.id || '');
 
+  useEffect(() => {
+    if (!selectedAccount && displayAccounts.length > 0) {
+      const def = displayAccounts.find((a) => a.is_default_sender) || displayAccounts[0];
+      if (def) setSelectedAccount(def.id);
+    }
+  }, [displayAccounts, selectedAccount]);
+
   const { register, handleSubmit, formState: { errors }, reset } = useForm({
     resolver: zodResolver(composeSchema),
   });
