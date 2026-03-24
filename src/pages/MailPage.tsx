@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Inbox, Mail, Loader2, Filter } from 'lucide-react';
 import { useEmailAccounts } from '@/hooks/useEmailAccounts';
@@ -33,24 +33,33 @@ export default function MailPage({ folder }: MailPageProps) {
   const [filterAccount, setFilterAccount] = useState<string>('all');
   const [loadingBody, setLoadingBody] = useState(false);
 
+  // Track locally-read email IDs so the list updates instantly
+  const [readIds, setReadIds] = useState<Set<string>>(new Set());
+
+  // Cache loaded email bodies to avoid re-fetching
+  const bodyCache = useRef<Map<string, { body: string; to: string[]; cc?: string[] }>>(new Map());
+
   const convertedEmails: Email[] = useMemo(() => {
-    return remoteEmails.map((re) => ({
-      id: `${re.account_id}::${re.uid}`,
-      account_id: re.account_id,
-      account_name: re.account_name,
-      from: re.from,
-      from_email: re.from_email,
-      to: re.to,
-      cc: re.cc,
-      subject: re.subject,
-      preview: re.preview || re.subject,
-      body: re.body || undefined,
-      date: re.date,
-      is_read: re.is_read,
-      folder,
-      has_attachments: re.has_attachments,
-    }));
-  }, [remoteEmails, folder]);
+    return remoteEmails.map((re) => {
+      const id = `${re.account_id}::${re.uid}`;
+      return {
+        id,
+        account_id: re.account_id,
+        account_name: re.account_name,
+        from: re.from,
+        from_email: re.from_email,
+        to: re.to,
+        cc: re.cc,
+        subject: re.subject,
+        preview: re.preview || re.subject,
+        body: re.body || undefined,
+        date: re.date,
+        is_read: re.is_read || readIds.has(id),
+        folder,
+        has_attachments: re.has_attachments,
+      };
+    });
+  }, [remoteEmails, folder, readIds]);
 
   const filteredEmails = useMemo(() => {
     let result = convertedEmails;
@@ -66,7 +75,7 @@ export default function MailPage({ folder }: MailPageProps) {
     return result;
   }, [convertedEmails, filterAccount, searchQuery]);
 
-  const markAsRead = async (accountId: string, uid: number) => {
+  const markAsRead = useCallback(async (accountId: string, uid: number) => {
     try {
       await supabase.functions.invoke('mark-read', {
         body: { account_id: accountId, uid, folder },
@@ -74,43 +83,53 @@ export default function MailPage({ folder }: MailPageProps) {
     } catch {
       // Silent — non-critical
     }
-  };
+  }, [folder]);
 
-  const handleSelectEmail = async (email: Email) => {
+  const handleSelectEmail = useCallback(async (email: Email) => {
     setComposing(false);
 
     const [accountId, uidStr] = email.id.split('::');
     const uid = parseInt(uidStr);
 
-    // Mark as read in background
+    // Mark as read immediately in the UI
     if (!email.is_read) {
+      setReadIds((prev) => new Set(prev).add(email.id));
       markAsRead(accountId, uid);
-      // Optimistically update local state
       email = { ...email, is_read: true };
     }
 
-    if (!email.body || email.body.length === 0) {
-      setSelectedEmail({ ...email, body: '<p>Carregando...</p>' });
-      setLoadingBody(true);
-      const fullEmail = await fetchEmailBody(accountId, uid);
-      if (fullEmail) {
-        setSelectedEmail({
-          ...email,
-          body: fullEmail.body || '<p>Este e-mail não possui conteúdo exibível.</p>',
-          to: fullEmail.to,
-          cc: fullEmail.cc,
-        });
-      } else {
-        setSelectedEmail({
-          ...email,
-          body: '<p>Não foi possível carregar o conteúdo deste e-mail.</p>',
-        });
-      }
-      setLoadingBody(false);
-    } else {
-      setSelectedEmail(email);
+    // If we already have the body cached, use it instantly
+    const cached = bodyCache.current.get(email.id);
+    if (cached) {
+      setSelectedEmail({ ...email, body: cached.body, to: cached.to, cc: cached.cc });
+      return;
     }
-  };
+
+    // If the email already has a body (from envelope), use it
+    if (email.body && email.body.length > 0) {
+      setSelectedEmail(email);
+      return;
+    }
+
+    // Fetch body
+    setSelectedEmail({ ...email, body: '<p>Carregando...</p>' });
+    setLoadingBody(true);
+    const fullEmail = await fetchEmailBody(accountId, uid);
+    if (fullEmail) {
+      const body = fullEmail.body || '<p>Este e-mail não possui conteúdo exibível.</p>';
+      bodyCache.current.set(email.id, { body, to: fullEmail.to, cc: fullEmail.cc });
+      setSelectedEmail({
+        ...email,
+        body,
+        to: fullEmail.to,
+        cc: fullEmail.cc,
+      });
+    } else {
+      const fallback = '<p>Não foi possível carregar o conteúdo deste e-mail.</p>';
+      setSelectedEmail({ ...email, body: fallback });
+    }
+    setLoadingBody(false);
+  }, [setComposing, markAsRead, fetchEmailBody]);
 
   const handleDelete = async (emailId: string) => {
     const [accountId, uidStr] = emailId.split('::');
@@ -122,6 +141,7 @@ export default function MailPage({ folder }: MailPageProps) {
       // Error handled by mutation
     }
 
+    bodyCache.current.delete(emailId);
     setSelectedEmail(null);
     setDeleteTarget(null);
   };
