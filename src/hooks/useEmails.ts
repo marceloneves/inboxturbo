@@ -21,6 +21,7 @@ export interface RemoteEmail {
 
 export function useEmails(folder: string) {
   const { accounts } = useEmailAccounts();
+  const { fetchIntervalMs } = useUserPreferences();
   const queryClient = useQueryClient();
 
   const query = useQuery({
