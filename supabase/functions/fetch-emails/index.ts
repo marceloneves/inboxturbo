@@ -81,50 +81,23 @@ Deno.serve(async (req) => {
 
     await client.connect();
 
-    // Map folder names
-    const folderMap: Record<string, string> = {
-      inbox: "INBOX",
-      sent: "[Gmail]/Enviados",
-      archive: "Archive",
-      trash: "[Gmail]/Lixeira",
-      INBOX: "INBOX",
-    };
-
-    const imapFolder = folderMap[folder] || folder;
-    let mailbox;
-    try {
-      mailbox = await client.mailboxOpen(imapFolder);
-    } catch {
-      // Try common alternatives
-      const alternatives: Record<string, string[]> = {
-        sent: ["Sent", "INBOX.Sent", "[Gmail]/Sent Mail", "Sent Items"],
-        archive: ["INBOX.Archive", "Archives", "INBOX.Archives"],
-        trash: ["Trash", "INBOX.Trash", "[Gmail]/Trash", "Deleted Items"],
-      };
-      const alts = alternatives[folder] || [];
-      for (const alt of alts) {
-        try {
-          mailbox = await client.mailboxOpen(alt);
-          break;
-        } catch {
-          continue;
-        }
-      }
-      if (!mailbox) {
-        await client.logout();
-        return new Response(
-          JSON.stringify({
-            emails: [],
-            total: 0,
-            page,
-            limit,
-            account_id,
-            account_name: account.friendly_name,
-          }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+    const resolvedMailbox = await resolveMailboxPath(client, folder);
+    if (!resolvedMailbox) {
+      await client.logout();
+      return new Response(
+        JSON.stringify({
+          emails: [],
+          total: 0,
+          page,
+          limit,
+          account_id,
+          account_name: account.friendly_name,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
+
+    const mailbox = await client.mailboxOpen(resolvedMailbox);
 
     // If requesting a specific email by UID
     if (uid) {
@@ -249,6 +222,62 @@ Deno.serve(async (req) => {
     );
   }
 });
+
+type MailboxInfo = {
+  path: string;
+  specialUse?: string | null;
+};
+
+async function resolveMailboxPath(client: ImapFlow, folder: string): Promise<string | null> {
+  const mailboxes = (await client.list()) as MailboxInfo[];
+  const normalizedFolder = folder.toLowerCase();
+
+  const specialUseMap: Record<string, string> = {
+    inbox: "\\Inbox",
+    sent: "\\Sent",
+    archive: "\\Archive",
+    trash: "\\Trash",
+  };
+
+  const specialUse = specialUseMap[normalizedFolder];
+  if (specialUse) {
+    const bySpecialUse = mailboxes.find((mailbox) => mailbox.specialUse === specialUse);
+    if (bySpecialUse) {
+      return bySpecialUse.path;
+    }
+  }
+
+  const candidates: Record<string, string[]> = {
+    inbox: ["inbox"],
+    sent: ["sent", "sent items", "enviados"],
+    archive: ["archive", "archives", "arquivo", "arquivados"],
+    trash: ["trash", "deleted items", "deleted messages", "lixeira", "papelera"],
+  };
+
+  const excluded: Record<string, string[]> = {
+    archive: ["all mail", "todos os e-mails"],
+  };
+
+  const folderCandidates = candidates[normalizedFolder] || [normalizedFolder];
+
+  const byName = mailboxes.find((mailbox) => {
+    const path = mailbox.path.toLowerCase();
+
+    if (excluded[normalizedFolder]?.some((term) => path.includes(term))) {
+      return false;
+    }
+
+    return folderCandidates.some(
+      (candidate) =>
+        path === candidate ||
+        path.endsWith(`/${candidate}`) ||
+        path.endsWith(`.${candidate}`) ||
+        path.includes(candidate)
+    );
+  });
+
+  return byName?.path ?? null;
+}
 
 function hasAttachments(bodyStructure: unknown): boolean {
   if (!bodyStructure) return false;

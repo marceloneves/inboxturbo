@@ -7,6 +7,11 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+type MailboxInfo = {
+  path: string;
+  specialUse?: string | null;
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -79,94 +84,45 @@ Deno.serve(async (req) => {
 
     await client.connect();
 
-    // Map folder names to IMAP paths
-    const folderMap: Record<string, string> = {
-      inbox: "INBOX",
-      sent: "[Gmail]/Enviados",
-      trash: "[Gmail]/Lixeira",
-      INBOX: "INBOX",
-    };
-
-    const imapFolder = folderMap[folder] || folder;
-    let mailbox;
-    try {
-      mailbox = await client.mailboxOpen(imapFolder);
-    } catch {
-      const alternatives: Record<string, string[]> = {
-        inbox: ["INBOX"],
-        sent: ["Sent", "INBOX.Sent", "[Gmail]/Sent Mail", "Sent Items"],
-        trash: ["Trash", "INBOX.Trash", "[Gmail]/Trash", "Deleted Items"],
-      };
-      const alts = alternatives[folder] || [];
-      for (const alt of alts) {
-        try {
-          mailbox = await client.mailboxOpen(alt);
-          break;
-        } catch {
-          continue;
-        }
-      }
-      if (!mailbox) {
-        await client.logout();
-        return new Response(
-          JSON.stringify({ error: "Pasta de origem não encontrada" }),
-          { status: 404, headers: corsHeaders }
-        );
-      }
-    }
-
-    // Try to find the archive folder and move the message
-    const archiveFolders = [
-      "Archive",
-      "INBOX.Archive",
-      "Archives",
-      "INBOX.Archives",
-    ];
-
-    let moved = false;
-    for (const archiveFolder of archiveFolders) {
-      try {
-        await client.messageMove(uid.toString(), archiveFolder, { uid: true });
-        moved = true;
-        break;
-      } catch {
-        continue;
-      }
-    }
-
-    // If no archive folder found, create one and retry
-    if (!moved) {
-      try {
-        await client.mailboxCreate("Archive");
-        // Re-open original folder since mailboxCreate may change context
-        await client.mailboxOpen(imapFolder);
-        await client.messageMove(uid.toString(), "Archive", { uid: true });
-        moved = true;
-      } catch {
-        // Last resort: try creating under INBOX namespace
-        try {
-          await client.mailboxCreate("INBOX.Archive");
-          await client.mailboxOpen(imapFolder);
-          await client.messageMove(uid.toString(), "INBOX.Archive", { uid: true });
-          moved = true;
-        } catch {
-          // Give up
-        }
-      }
-    }
-
-    if (!moved) {
+    const sourceMailbox = await resolveMailboxPath(client, folder);
+    if (!sourceMailbox) {
       await client.logout();
       return new Response(
-        JSON.stringify({ error: "Não foi possível criar ou encontrar a pasta de arquivo" }),
+        JSON.stringify({ error: "Pasta de origem não encontrada" }),
+        { status: 404, headers: corsHeaders }
+      );
+    }
+
+    const archiveMailbox = await ensureArchiveMailbox(client);
+    if (!archiveMailbox) {
+      await client.logout();
+      return new Response(
+        JSON.stringify({ error: "Não foi possível localizar ou criar a pasta de arquivo" }),
         { status: 500, headers: corsHeaders }
       );
     }
 
+    if (sourceMailbox === archiveMailbox) {
+      await client.logout();
+      return new Response(
+        JSON.stringify({ success: true, already_archived: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Archiving UID ${uid} from ${sourceMailbox} to ${archiveMailbox}`);
+
+    await client.mailboxOpen(sourceMailbox);
+    await client.messageCopy(uid.toString(), archiveMailbox, { uid: true });
+
+    await client.mailboxOpen(sourceMailbox);
+    await client.messageFlagsAdd(uid.toString(), ["\\Deleted"], { uid: true });
+    await client.messageDelete(uid.toString(), { uid: true });
+
     await client.logout();
 
     return new Response(
-      JSON.stringify({ success: true }),
+      JSON.stringify({ success: true, source_mailbox: sourceMailbox, archive_mailbox: archiveMailbox }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
@@ -180,3 +136,83 @@ Deno.serve(async (req) => {
     );
   }
 });
+
+async function resolveMailboxPath(client: ImapFlow, folder: string): Promise<string | null> {
+  const mailboxes = (await client.list()) as MailboxInfo[];
+  const normalizedFolder = folder.toLowerCase();
+
+  const specialUseMap: Record<string, string> = {
+    inbox: "\\Inbox",
+    sent: "\\Sent",
+    archive: "\\Archive",
+    trash: "\\Trash",
+  };
+
+  const specialUse = specialUseMap[normalizedFolder];
+  if (specialUse) {
+    const bySpecialUse = mailboxes.find((mailbox) => mailbox.specialUse === specialUse);
+    if (bySpecialUse) {
+      return bySpecialUse.path;
+    }
+  }
+
+  const candidates: Record<string, string[]> = {
+    inbox: ["inbox"],
+    sent: ["sent", "sent items", "enviados"],
+    archive: ["archive", "archives", "arquivo", "arquivados"],
+    trash: ["trash", "deleted items", "deleted messages", "lixeira", "papelera"],
+  };
+
+  const excluded: Record<string, string[]> = {
+    archive: ["all mail", "todos os e-mails"],
+  };
+
+  const folderCandidates = candidates[normalizedFolder] || [normalizedFolder];
+
+  const byName = mailboxes.find((mailbox) => {
+    const path = mailbox.path.toLowerCase();
+
+    if (excluded[normalizedFolder]?.some((term) => path.includes(term))) {
+      return false;
+    }
+
+    return folderCandidates.some(
+      (candidate) =>
+        path === candidate ||
+        path.endsWith(`/${candidate}`) ||
+        path.endsWith(`.${candidate}`) ||
+        path.includes(candidate)
+    );
+  });
+
+  return byName?.path ?? null;
+}
+
+async function ensureArchiveMailbox(client: ImapFlow): Promise<string | null> {
+  const existingArchive = await resolveMailboxPath(client, "archive");
+  if (existingArchive) {
+    return existingArchive;
+  }
+
+  for (const candidate of ["Archive", "INBOX.Archive"]) {
+    try {
+      await client.mailboxCreate(candidate);
+    } catch {
+      // ignore and try to resolve again
+    }
+
+    const resolvedArchive = await resolveMailboxPath(client, "archive");
+    if (resolvedArchive) {
+      return resolvedArchive;
+    }
+
+    try {
+      await client.mailboxOpen(candidate);
+      return candidate;
+    } catch {
+      // continue
+    }
+  }
+
+  return null;
+}
