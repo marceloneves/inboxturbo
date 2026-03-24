@@ -73,6 +73,23 @@ export function useLabels() {
     },
   });
 
+  const updateLabel = useMutation({
+    mutationFn: async (params: { id: string; name: string; color: string }) => {
+      const { error } = await supabase
+        .from('email_labels')
+        .update({ name: params.name, color: params.color })
+        .eq('id', params.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['email-labels'] });
+      toast.success(t.labels.labelUpdated);
+    },
+    onError: (err: Error) => {
+      toast.error(`${t.labels.labelError}: ${err.message}`);
+    },
+  });
+
   const deleteLabel = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('email_labels').delete().eq('id', id);
