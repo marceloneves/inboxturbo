@@ -117,8 +117,6 @@ Deno.serve(async (req) => {
 
     // Try to find the archive folder and move the message
     const archiveFolders = [
-      "[Gmail]/Todos os e-mails",
-      "[Gmail]/All Mail",
       "Archive",
       "INBOX.Archive",
       "Archives",
