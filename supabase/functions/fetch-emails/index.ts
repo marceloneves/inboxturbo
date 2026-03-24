@@ -81,50 +81,23 @@ Deno.serve(async (req) => {
 
     await client.connect();
 
-    // Map folder names
-    const folderMap: Record<string, string> = {
-      inbox: "INBOX",
-      sent: "[Gmail]/Enviados",
-      archive: "Archive",
-      trash: "[Gmail]/Lixeira",
-      INBOX: "INBOX",
-    };
-
-    const imapFolder = folderMap[folder] || folder;
-    let mailbox;
-    try {
-      mailbox = await client.mailboxOpen(imapFolder);
-    } catch {
-      // Try common alternatives
-      const alternatives: Record<string, string[]> = {
-        sent: ["Sent", "INBOX.Sent", "[Gmail]/Sent Mail", "Sent Items"],
-        archive: ["INBOX.Archive", "Archives", "INBOX.Archives"],
-        trash: ["Trash", "INBOX.Trash", "[Gmail]/Trash", "Deleted Items"],
-      };
-      const alts = alternatives[folder] || [];
-      for (const alt of alts) {
-        try {
-          mailbox = await client.mailboxOpen(alt);
-          break;
-        } catch {
-          continue;
-        }
-      }
-      if (!mailbox) {
-        await client.logout();
-        return new Response(
-          JSON.stringify({
-            emails: [],
-            total: 0,
-            page,
-            limit,
-            account_id,
-            account_name: account.friendly_name,
-          }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+    const resolvedMailbox = await resolveMailboxPath(client, folder);
+    if (!resolvedMailbox) {
+      await client.logout();
+      return new Response(
+        JSON.stringify({
+          emails: [],
+          total: 0,
+          page,
+          limit,
+          account_id,
+          account_name: account.friendly_name,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
+
+    const mailbox = await client.mailboxOpen(resolvedMailbox);
 
     // If requesting a specific email by UID
     if (uid) {
