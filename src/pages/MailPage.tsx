@@ -166,6 +166,21 @@ export default function MailPage({ folder }: MailPageProps) {
     setSelectedEmail(null);
   };
 
+  const handleEmptyTrash = async () => {
+    setEmptyTrashConfirm(false);
+    setSelectedEmail(null);
+    bodyCache.current.clear();
+    // Empty trash for all accounts (or filtered account)
+    const targetAccounts = filterAccount === 'all' ? accounts : accounts.filter(a => a.id === filterAccount);
+    for (const acc of targetAccounts) {
+      try {
+        await emptyTrash.mutateAsync(acc.id);
+      } catch {
+        // Error handled by mutation
+      }
+    }
+  };
+
   const folderLabels: Record<string, string> = { inbox: 'Caixa de entrada', sent: 'Enviados', archive: 'Arquivo', trash: 'Lixeira' };
   const isLoading = accountsLoading || emailsLoading;
   const showViewer = selectedEmail || composing;
