@@ -71,6 +71,50 @@ export type Database = {
         }
         Relationships: []
       }
+      email_stats: {
+        Row: {
+          account_id: string
+          avg_response_time_minutes: number | null
+          created_at: string
+          id: string
+          received_count: number
+          sent_count: number
+          stat_date: string
+          top_senders: Json | null
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          avg_response_time_minutes?: number | null
+          created_at?: string
+          id?: string
+          received_count?: number
+          sent_count?: number
+          stat_date?: string
+          top_senders?: Json | null
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          avg_response_time_minutes?: number | null
+          created_at?: string
+          id?: string
+          received_count?: number
+          sent_count?: number
+          stat_date?: string
+          top_senders?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_stats_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "email_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
