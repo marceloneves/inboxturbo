@@ -269,6 +269,8 @@ export const es = {
     assignLabel: 'Asignar etiqueta',
     removeLabel: 'Quitar etiqueta',
     manageLabels: 'Administrar etiquetas',
+    editLabel: 'Editar etiqueta',
+    labelUpdated: '¡Etiqueta actualizada!',
   },
   pinned: {
     pinned: 'Fijado',

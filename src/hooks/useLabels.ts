@@ -149,6 +149,7 @@ export function useLabels() {
     assignments: assignmentsQuery.data || [],
     isLoading: labelsQuery.isLoading,
     createLabel,
+    updateLabel,
     deleteLabel,
     assignLabel,
     removeAssignment,

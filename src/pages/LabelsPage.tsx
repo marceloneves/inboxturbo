@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Plus, Trash2, Loader2, Tag } from 'lucide-react';
+import { Plus, Trash2, Loader2, Tag, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { useLabels } from '@/hooks/useLabels';
+import { useLabels, type EmailLabel } from '@/hooks/useLabels';
 import { useI18n } from '@/i18n';
 import {
   Dialog,
@@ -19,10 +19,49 @@ const PRESET_COLORS = [
   '#14b8a6', '#a855f7', '#e11d48', '#84cc16',
 ];
 
+function ColorPicker({ value, onChange }: { value: string; onChange: (c: string) => void }) {
+  return (
+    <div className="space-y-1.5">
+      <div className="flex gap-2 flex-wrap items-center">
+        {PRESET_COLORS.map((color) => (
+          <button
+            key={color}
+            onClick={() => onChange(color)}
+            className="h-8 w-8 rounded-full border-2 transition-transform hover:scale-110"
+            style={{
+              backgroundColor: color,
+              borderColor: value === color ? 'hsl(var(--foreground))' : 'transparent',
+            }}
+          />
+        ))}
+        <label
+          className="relative h-8 w-8 rounded-full border-2 transition-transform hover:scale-110 cursor-pointer overflow-hidden flex items-center justify-center bg-gradient-to-br from-red-500 via-green-500 to-blue-500"
+          style={{
+            borderColor: !PRESET_COLORS.includes(value) ? 'hsl(var(--foreground))' : 'transparent',
+          }}
+          title="Custom color"
+        >
+          <input
+            type="color"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+          />
+        </label>
+      </div>
+      <div className="flex items-center gap-2 mt-2">
+        <div className="h-5 w-5 rounded-full" style={{ backgroundColor: value }} />
+        <span className="text-xs text-muted-foreground font-mono">{value}</span>
+      </div>
+    </div>
+  );
+}
+
 export default function LabelsPage() {
-  const { labels, isLoading, createLabel, deleteLabel } = useLabels();
+  const { labels, isLoading, createLabel, updateLabel, deleteLabel } = useLabels();
   const { t } = useI18n();
   const [addOpen, setAddOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<EmailLabel | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [newColor, setNewColor] = useState('#3b82f6');
@@ -34,6 +73,30 @@ export default function LabelsPage() {
     setNewName('');
     setNewColor('#3b82f6');
   };
+
+  const openEdit = (label: EmailLabel) => {
+    setEditTarget(label);
+    setNewName(label.name);
+    setNewColor(label.color);
+  };
+
+  const handleEdit = async () => {
+    if (!editTarget || !newName.trim()) return;
+    await updateLabel.mutateAsync({ id: editTarget.id, name: newName.trim(), color: newColor });
+    setEditTarget(null);
+    setNewName('');
+    setNewColor('#3b82f6');
+  };
+
+  const closeDialog = () => {
+    setAddOpen(false);
+    setEditTarget(null);
+    setNewName('');
+    setNewColor('#3b82f6');
+  };
+
+  const isDialogOpen = addOpen || !!editTarget;
+  const isEditing = !!editTarget;
 
   if (isLoading) {
     return (
@@ -50,7 +113,7 @@ export default function LabelsPage() {
           <h1 className="text-2xl font-bold" style={{ lineHeight: '1.1' }}>{t.labels.title}</h1>
           <p className="text-sm text-muted-foreground mt-1">{t.labels.manageLabels}</p>
         </div>
-        <Button onClick={() => setAddOpen(true)} className="gap-2">
+        <Button onClick={() => { setNewName(''); setNewColor('#3b82f6'); setAddOpen(true); }} className="gap-2">
           <Plus className="h-4 w-4" /> {t.labels.addLabel}
         </Button>
       </div>
@@ -76,6 +139,13 @@ export default function LabelsPage() {
               <Button
                 variant="ghost"
                 size="sm"
+                onClick={() => openEdit(label)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setDeleteTarget(label.id)}
                 className="text-destructive hover:text-destructive"
               >
@@ -86,10 +156,10 @@ export default function LabelsPage() {
         </div>
       )}
 
-      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={closeDialog}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>{t.labels.addLabel}</DialogTitle>
+            <DialogTitle>{isEditing ? t.labels.editLabel : t.labels.addLabel}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
@@ -102,44 +172,15 @@ export default function LabelsPage() {
             </div>
             <div className="space-y-1.5">
               <Label>{t.labels.labelColor}</Label>
-              <div className="flex gap-2 flex-wrap items-center">
-                {PRESET_COLORS.map((color) => (
-                  <button
-                    key={color}
-                    onClick={() => setNewColor(color)}
-                    className="h-8 w-8 rounded-full border-2 transition-transform hover:scale-110"
-                    style={{
-                      backgroundColor: color,
-                      borderColor: newColor === color ? 'hsl(var(--foreground))' : 'transparent',
-                    }}
-                  />
-                ))}
-                {/* Custom color picker */}
-                <label
-                  className="relative h-8 w-8 rounded-full border-2 transition-transform hover:scale-110 cursor-pointer overflow-hidden flex items-center justify-center bg-gradient-to-br from-red-500 via-green-500 to-blue-500"
-                  style={{
-                    borderColor: !PRESET_COLORS.includes(newColor) ? 'hsl(var(--foreground))' : 'transparent',
-                  }}
-                  title="Custom color"
-                >
-                  <input
-                    type="color"
-                    value={newColor}
-                    onChange={(e) => setNewColor(e.target.value)}
-                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                  />
-                </label>
-              </div>
-              {/* Preview of selected color */}
-              <div className="flex items-center gap-2 mt-2">
-                <div className="h-5 w-5 rounded-full" style={{ backgroundColor: newColor }} />
-                <span className="text-xs text-muted-foreground font-mono">{newColor}</span>
-              </div>
+              <ColorPicker value={newColor} onChange={setNewColor} />
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setAddOpen(false)}>{t.common.cancel}</Button>
-              <Button onClick={handleAdd} disabled={!newName.trim() || createLabel.isPending}>
-                {createLabel.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button variant="outline" onClick={closeDialog}>{t.common.cancel}</Button>
+              <Button
+                onClick={isEditing ? handleEdit : handleAdd}
+                disabled={!newName.trim() || (isEditing ? updateLabel.isPending : createLabel.isPending)}
+              >
+                {(isEditing ? updateLabel.isPending : createLabel.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {t.common.save}
               </Button>
             </div>
