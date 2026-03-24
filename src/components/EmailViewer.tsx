@@ -1,6 +1,6 @@
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ArrowLeft, Trash2, Reply, Paperclip, Loader2 } from 'lucide-react';
+import { ArrowLeft, Trash2, Reply, Paperclip, Loader2, Archive } from 'lucide-react';
 import { AccountBadge } from '@/components/AccountBadge';
 import { Button } from '@/components/ui/button';
 import { ReplyInline } from '@/components/ReplyInline';
