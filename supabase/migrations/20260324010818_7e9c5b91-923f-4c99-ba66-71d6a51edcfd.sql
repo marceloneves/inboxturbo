@@ -1,0 +1,1 @@
+ALTER TABLE public.user_preferences ADD COLUMN IF NOT EXISTS fetch_interval_seconds integer NOT NULL DEFAULT 60;
