@@ -34,7 +34,7 @@ export default function MailPage({ folder }: MailPageProps) {
 
   const convertedEmails: Email[] = useMemo(() => {
     return remoteEmails.map((re) => ({
-      id: `${re.account_id}-${re.uid}`,
+      id: `${re.account_id}::${re.uid}`,
       account_id: re.account_id,
       account_name: re.account_name,
       from: re.from,
