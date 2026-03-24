@@ -20,6 +20,6 @@ export interface Email {
   body?: string;
   date: string;
   is_read: boolean;
-  folder: 'inbox' | 'sent' | 'trash';
+  folder: 'inbox' | 'sent' | 'archive' | 'trash';
   has_attachments?: boolean;
 }

@@ -1,6 +1,6 @@
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ArrowLeft, Trash2, Reply, Paperclip, Loader2 } from 'lucide-react';
+import { ArrowLeft, Trash2, Reply, Paperclip, Loader2, Archive } from 'lucide-react';
 import { AccountBadge } from '@/components/AccountBadge';
 import { Button } from '@/components/ui/button';
 import { ReplyInline } from '@/components/ReplyInline';
@@ -11,10 +11,12 @@ interface EmailViewerProps {
   email: Email;
   onBack: () => void;
   onDelete: (id: string) => void;
+  onArchive?: (id: string) => void;
   isDeleting?: boolean;
+  isArchiving?: boolean;
 }
 
-export function EmailViewer({ email, onBack, onDelete, isDeleting }: EmailViewerProps) {
+export function EmailViewer({ email, onBack, onDelete, onArchive, isDeleting, isArchiving }: EmailViewerProps) {
   const [replying, setReplying] = useState(false);
 
   return (
@@ -27,6 +29,21 @@ export function EmailViewer({ email, onBack, onDelete, isDeleting }: EmailViewer
         <Button variant="ghost" size="sm" onClick={() => setReplying(true)} disabled={replying}>
           <Reply className="h-4 w-4 mr-1" /> Responder
         </Button>
+        {onArchive && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onArchive(email.id)}
+            disabled={isArchiving}
+          >
+            {isArchiving ? (
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+            ) : (
+              <Archive className="h-4 w-4 mr-1" />
+            )}
+            Arquivar
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="sm"

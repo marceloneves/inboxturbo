@@ -35,6 +35,7 @@ const App = () => (
               <Route index element={<Navigate to="/app/inbox" replace />} />
               <Route path="inbox" element={<MailPage folder="inbox" />} />
               <Route path="sent" element={<MailPage folder="sent" />} />
+              <Route path="arquivo" element={<MailPage folder="archive" />} />
               <Route path="trash" element={<MailPage folder="trash" />} />
               <Route path="contas" element={<AccountsPage />} />
               <Route path="compose" element={<Navigate to="/app/inbox" replace />} />

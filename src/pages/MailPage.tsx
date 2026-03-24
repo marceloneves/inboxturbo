@@ -4,6 +4,7 @@ import { Inbox, Mail, Loader2, Filter } from 'lucide-react';
 import { useEmailAccounts } from '@/hooks/useEmailAccounts';
 import { useEmails } from '@/hooks/useEmails';
 import { useDeleteEmail } from '@/hooks/useDeleteEmail';
+import { useArchiveEmail } from '@/hooks/useArchiveEmail';
 import { supabase } from '@/integrations/supabase/client';
 import { EmailList } from '@/components/EmailList';
 import { EmailViewer } from '@/components/EmailViewer';
@@ -15,7 +16,7 @@ import { cn } from '@/lib/utils';
 import type { Email } from '@/types/email';
 
 interface MailPageProps {
-  folder: 'inbox' | 'sent' | 'trash';
+  folder: 'inbox' | 'sent' | 'archive' | 'trash';
 }
 
 export default function MailPage({ folder }: MailPageProps) {
@@ -27,6 +28,7 @@ export default function MailPage({ folder }: MailPageProps) {
   const { accounts, isLoading: accountsLoading } = useEmailAccounts();
   const { emails: remoteEmails, isLoading: emailsLoading, fetchEmailBody } = useEmails(folder);
   const deleteEmail = useDeleteEmail();
+  const archiveEmail = useArchiveEmail();
 
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
@@ -146,7 +148,21 @@ export default function MailPage({ folder }: MailPageProps) {
     setDeleteTarget(null);
   };
 
-  const folderLabels = { inbox: 'Caixa de entrada', sent: 'Enviados', trash: 'Lixeira' };
+  const handleArchive = async (emailId: string) => {
+    const [accountId, uidStr] = emailId.split('::');
+    const uid = parseInt(uidStr);
+
+    try {
+      await archiveEmail.mutateAsync({ account_id: accountId, uid, folder });
+    } catch {
+      // Error handled by mutation
+    }
+
+    bodyCache.current.delete(emailId);
+    setSelectedEmail(null);
+  };
+
+  const folderLabels: Record<string, string> = { inbox: 'Caixa de entrada', sent: 'Enviados', archive: 'Arquivo', trash: 'Lixeira' };
   const isLoading = accountsLoading || emailsLoading;
   const showViewer = selectedEmail || composing;
 
@@ -227,7 +243,9 @@ export default function MailPage({ folder }: MailPageProps) {
             email={selectedEmail}
             onBack={() => setSelectedEmail(null)}
             onDelete={(id) => setDeleteTarget(id)}
+            onArchive={folder !== 'archive' ? handleArchive : undefined}
             isDeleting={deleteEmail.isPending}
+            isArchiving={archiveEmail.isPending}
           />
         ) : (
           <div className="hidden lg:flex h-full items-center justify-center">
