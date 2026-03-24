@@ -260,7 +260,7 @@ export default function MailPage({ folder }: MailPageProps) {
         )}
       </>
     ) : (
-      <ResizablePanelGroup direction="horizontal">
+      <ResizablePanelGroup direction="horizontal" autoSaveId="mail-panel-sizes">
         <ResizablePanel defaultSize={30} minSize={20} maxSize={50}>
           <div className="flex h-full flex-col">
             <div className="flex items-center gap-2 border-b px-4 py-2.5">
