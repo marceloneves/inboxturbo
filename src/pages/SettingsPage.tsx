@@ -4,12 +4,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '@/hooks/useAuth';
 import { useEmailAccounts } from '@/hooks/useEmailAccounts';
+import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Loader2, Lock } from 'lucide-react';
+import { Loader2, Lock, RefreshCw } from 'lucide-react';
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(1, 'Obrigatório'),
@@ -19,9 +20,20 @@ const passwordSchema = z.object({
   message: 'Senhas não conferem', path: ['confirmPassword'],
 });
 
+const intervalOptions = [
+  { value: '30', label: '30 segundos' },
+  { value: '60', label: '1 minuto' },
+  { value: '120', label: '2 minutos' },
+  { value: '300', label: '5 minutos' },
+  { value: '600', label: '10 minutos' },
+  { value: '900', label: '15 minutos' },
+  { value: '1800', label: '30 minutos' },
+];
+
 export default function SettingsPage() {
   const { updatePassword } = useAuth();
   const { accounts } = useEmailAccounts();
+  const { preferences, updatePreferences } = useUserPreferences();
   const [changingPw, setChangingPw] = useState(false);
   const [defaultAccount, setDefaultAccount] = useState(
     accounts.find((a) => a.is_default_sender)?.id || ''
@@ -50,6 +62,29 @@ export default function SettingsPage() {
         <p className="text-sm text-muted-foreground mt-1">Personalize sua experiência</p>
       </div>
 
+      {/* Fetch interval */}
+      <div className="rounded-xl border bg-card p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <RefreshCw className="h-4 w-4 text-muted-foreground" />
+          <h2 className="font-semibold">Intervalo de busca de e-mails</h2>
+        </div>
+        <p className="text-sm text-muted-foreground mb-3">
+          Define de quanto em quanto tempo o sistema busca novos e-mails em todas as contas conectadas.
+        </p>
+        <Select
+          value={String(preferences?.fetch_interval_seconds || 60)}
+          onValueChange={(v) => updatePreferences.mutate({ fetch_interval_seconds: Number(v) })}
+        >
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {intervalOptions.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Change password */}
       <div className="rounded-xl border bg-card p-6">
         <div className="flex items-center gap-2 mb-4">
           <Lock className="h-4 w-4 text-muted-foreground" />
