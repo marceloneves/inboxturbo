@@ -84,7 +84,7 @@ export function AuthForm({ mode, onSubmit, error, success }: AuthFormProps) {
           </div>
           <h1 className="text-2xl font-bold tracking-tight" style={{ lineHeight: '1.1' }}>{titles[mode]}</h1>
           {mode === 'login' && <p className="mt-2 text-sm text-muted-foreground">Acesse suas contas de e-mail em um só lugar</p>}
-          {mode === 'signup' && <p className="mt-2 text-sm text-muted-foreground">Centralize seus e-mails com InboxTurbo</p>}
+          {mode === 'signup' && <p className="mt-2 text-sm text-muted-foreground">Centralize seus e-mails com inboxTurbo</p>}
           {mode === 'forgot' && <p className="mt-2 text-sm text-muted-foreground">Enviaremos instruções para o seu e-mail</p>}
           {mode === 'reset' && <p className="mt-2 text-sm text-muted-foreground">Escolha uma nova senha segura</p>}
         </div>

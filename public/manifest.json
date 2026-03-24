@@ -1,6 +1,6 @@
 {
-  "name": "InboxTurbo",
-  "short_name": "InboxTurbo",
+  "name": "inboxTurbo",
+  "short_name": "inboxTurbo",
   "description": "Agregador de contas de e-mail em uma interface unificada",
   "start_url": "/login",
   "display": "standalone",
