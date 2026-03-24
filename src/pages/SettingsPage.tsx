@@ -5,12 +5,14 @@ import { z } from 'zod';
 import { useAuth } from '@/hooks/useAuth';
 import { useEmailAccounts } from '@/hooks/useEmailAccounts';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
+import { useTheme } from '@/hooks/useTheme';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { Loader2, Lock, RefreshCw } from 'lucide-react';
+import { Loader2, Lock, RefreshCw, Palette } from 'lucide-react';
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(1, 'Obrigatório'),
