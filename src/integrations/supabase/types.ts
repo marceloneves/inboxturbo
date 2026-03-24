@@ -71,6 +71,72 @@ export type Database = {
         }
         Relationships: []
       }
+      email_label_assignments: {
+        Row: {
+          account_id: string
+          created_at: string
+          email_uid: number
+          id: string
+          label_id: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          email_uid: number
+          id?: string
+          label_id: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          email_uid?: number
+          id?: string
+          label_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_label_assignments_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "email_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_label_assignments_label_id_fkey"
+            columns: ["label_id"]
+            isOneToOne: false
+            referencedRelation: "email_labels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_labels: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       email_stats: {
         Row: {
           account_id: string
@@ -108,6 +174,38 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "email_stats_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "email_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pinned_emails: {
+        Row: {
+          account_id: string
+          email_uid: number
+          id: string
+          pinned_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          email_uid: number
+          id?: string
+          pinned_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          email_uid?: number
+          id?: string
+          pinned_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pinned_emails_account_id_fkey"
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "email_accounts"
