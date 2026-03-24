@@ -3,10 +3,12 @@ import { useOutletContext } from 'react-router-dom';
 import { Inbox, Mail, Loader2 } from 'lucide-react';
 import { useEmailAccounts } from '@/hooks/useEmailAccounts';
 import { useEmails } from '@/hooks/useEmails';
+import { useDeleteEmail } from '@/hooks/useDeleteEmail';
 import { EmailList } from '@/components/EmailList';
 import { EmailViewer } from '@/components/EmailViewer';
 import { EmptyState } from '@/components/EmptyState';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { ReplyEmailModal } from '@/components/ReplyEmailModal';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Email } from '@/types/email';
@@ -19,11 +21,13 @@ export default function MailPage({ folder }: MailPageProps) {
   const { searchQuery } = useOutletContext<{ searchQuery: string }>();
   const { accounts, isLoading: accountsLoading } = useEmailAccounts();
   const { emails: remoteEmails, isLoading: emailsLoading, fetchEmailBody } = useEmails(folder);
+  const deleteEmail = useDeleteEmail();
 
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [filterAccount, setFilterAccount] = useState<string | null>(null);
   const [loadingBody, setLoadingBody] = useState(false);
+  const [replyEmail, setReplyEmail] = useState<Email | null>(null);
 
   const convertedEmails: Email[] = useMemo(() => {
     return remoteEmails.map((re) => ({
@@ -80,7 +84,17 @@ export default function MailPage({ folder }: MailPageProps) {
     }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (emailId: string) => {
+    const parts = emailId.split('-');
+    const accountId = parts[0];
+    const uid = parseInt(parts.slice(1).join('-'));
+
+    try {
+      await deleteEmail.mutateAsync({ account_id: accountId, uid, folder });
+    } catch {
+      // Error handled by mutation
+    }
+
     setSelectedEmail(null);
     setDeleteTarget(null);
   };
@@ -169,7 +183,8 @@ export default function MailPage({ folder }: MailPageProps) {
             email={selectedEmail}
             onBack={() => setSelectedEmail(null)}
             onDelete={(id) => setDeleteTarget(id)}
-            onReply={() => {}}
+            onReply={() => setReplyEmail(selectedEmail)}
+            isDeleting={deleteEmail.isPending}
           />
         ) : (
           <div className="hidden lg:flex h-full items-center justify-center">
@@ -185,10 +200,16 @@ export default function MailPage({ folder }: MailPageProps) {
         open={!!deleteTarget}
         onOpenChange={() => setDeleteTarget(null)}
         title="Excluir e-mail"
-        description="Tem certeza que deseja mover este e-mail para a lixeira?"
+        description={folder === 'trash' ? 'Este e-mail será excluído permanentemente.' : 'Este e-mail será movido para a lixeira.'}
         confirmLabel="Excluir"
         onConfirm={() => deleteTarget && handleDelete(deleteTarget)}
         variant="destructive"
+      />
+
+      <ReplyEmailModal
+        open={!!replyEmail}
+        onClose={() => setReplyEmail(null)}
+        originalEmail={replyEmail!}
       />
     </div>
   );

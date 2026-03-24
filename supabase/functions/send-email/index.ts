@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { account_id, to, cc, bcc, subject, body } = await req.json();
+    const { account_id, to, cc, bcc, subject, body, in_reply_to, references } = await req.json();
 
     if (!account_id || !to || !subject || !body) {
       return new Response(
@@ -46,7 +46,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get account credentials
     const { data: account, error: accError } = await supabase
       .from("email_accounts")
       .select("*")
@@ -77,7 +76,7 @@ Deno.serve(async (req) => {
       },
     });
 
-    const mailOptions = {
+    const mailOptions: Record<string, unknown> = {
       from: `"${account.friendly_name}" <${account.email_address}>`,
       to: Array.isArray(to) ? to.join(", ") : to,
       cc: cc ? (Array.isArray(cc) ? cc.join(", ") : cc) : undefined,
@@ -85,6 +84,9 @@ Deno.serve(async (req) => {
       subject,
       html: body,
     };
+
+    if (in_reply_to) mailOptions.inReplyTo = in_reply_to;
+    if (references) mailOptions.references = references;
 
     const info = await transporter.sendMail(mailOptions);
 

@@ -1,6 +1,6 @@
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ArrowLeft, Trash2, Reply, Paperclip } from 'lucide-react';
+import { ArrowLeft, Trash2, Reply, Paperclip, Loader2 } from 'lucide-react';
 import { AccountBadge } from '@/components/AccountBadge';
 import { Button } from '@/components/ui/button';
 import type { Email } from '@/types/email';
@@ -10,9 +10,10 @@ interface EmailViewerProps {
   onBack: () => void;
   onDelete: (id: string) => void;
   onReply: () => void;
+  isDeleting?: boolean;
 }
 
-export function EmailViewer({ email, onBack, onDelete, onReply }: EmailViewerProps) {
+export function EmailViewer({ email, onBack, onDelete, onReply, isDeleting }: EmailViewerProps) {
   return (
     <div className="flex h-full flex-col animate-fade-in">
       <div className="flex items-center gap-2 border-b px-4 py-3">
@@ -23,8 +24,19 @@ export function EmailViewer({ email, onBack, onDelete, onReply }: EmailViewerPro
         <Button variant="ghost" size="sm" onClick={onReply}>
           <Reply className="h-4 w-4 mr-1" /> Responder
         </Button>
-        <Button variant="ghost" size="sm" onClick={() => onDelete(email.id)} className="text-destructive hover:text-destructive">
-          <Trash2 className="h-4 w-4 mr-1" /> Excluir
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onDelete(email.id)}
+          className="text-destructive hover:text-destructive"
+          disabled={isDeleting}
+        >
+          {isDeleting ? (
+            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+          ) : (
+            <Trash2 className="h-4 w-4 mr-1" />
+          )}
+          Excluir
         </Button>
       </div>
 
