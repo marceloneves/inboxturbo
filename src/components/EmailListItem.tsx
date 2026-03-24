@@ -3,7 +3,7 @@ import { ptBR } from 'date-fns/locale';
 import { Paperclip } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AccountBadge } from '@/components/AccountBadge';
-import type { Email } from '@/data/mockData';
+import type { Email } from '@/types/email';
 
 interface EmailListItemProps {
   email: Email;

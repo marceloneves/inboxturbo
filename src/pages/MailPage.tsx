@@ -2,15 +2,14 @@ import { useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Inbox, Mail, Loader2 } from 'lucide-react';
 import { useEmailAccounts } from '@/hooks/useEmailAccounts';
-import { useEmails, type RemoteEmail } from '@/hooks/useEmails';
-import { mockEmails, mockAccounts } from '@/data/mockData';
+import { useEmails } from '@/hooks/useEmails';
 import { EmailList } from '@/components/EmailList';
 import { EmailViewer } from '@/components/EmailViewer';
 import { EmptyState } from '@/components/EmptyState';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import type { Email } from '@/data/mockData';
+import type { Email } from '@/types/email';
 
 interface MailPageProps {
   folder: 'inbox' | 'sent' | 'trash';
@@ -24,13 +23,9 @@ export default function MailPage({ folder }: MailPageProps) {
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [filterAccount, setFilterAccount] = useState<string | null>(null);
-  const [localMockEmails, setLocalMockEmails] = useState(mockEmails);
   const [loadingBody, setLoadingBody] = useState(false);
 
-  const hasRealAccounts = accounts.length > 0;
-
-  // Convert remote emails to the Email interface for display
-  const convertedRemoteEmails: Email[] = useMemo(() => {
+  const convertedEmails: Email[] = useMemo(() => {
     return remoteEmails.map((re) => ({
       id: `${re.account_id}-${re.uid}`,
       account_id: re.account_id,
@@ -49,12 +44,8 @@ export default function MailPage({ folder }: MailPageProps) {
     }));
   }, [remoteEmails, folder]);
 
-  // Use real emails if accounts exist, otherwise mock
-  const sourceEmails = hasRealAccounts ? convertedRemoteEmails : localMockEmails.filter((e) => e.folder === folder);
-  const displayAccounts = hasRealAccounts ? accounts.map(a => ({ id: a.id, friendly_name: a.friendly_name })) : mockAccounts;
-
   const filteredEmails = useMemo(() => {
-    let result = sourceEmails;
+    let result = convertedEmails;
     if (filterAccount) result = result.filter((e) => e.account_id === filterAccount);
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -65,10 +56,10 @@ export default function MailPage({ folder }: MailPageProps) {
       );
     }
     return result;
-  }, [sourceEmails, filterAccount, searchQuery]);
+  }, [convertedEmails, filterAccount, searchQuery]);
 
   const handleSelectEmail = async (email: Email) => {
-    if (hasRealAccounts && !email.body) {
+    if (!email.body) {
       setSelectedEmail({ ...email, body: '<p>Carregando...</p>' });
       setLoadingBody(true);
       const parts = email.id.split('-');
@@ -87,22 +78,15 @@ export default function MailPage({ folder }: MailPageProps) {
     } else {
       setSelectedEmail(email);
     }
-
-    if (!hasRealAccounts) {
-      setLocalMockEmails((prev) => prev.map((e) => e.id === email.id ? { ...e, is_read: true } : e));
-    }
   };
 
   const handleDelete = (id: string) => {
-    if (!hasRealAccounts) {
-      setLocalMockEmails((prev) => prev.map((e) => e.id === id ? { ...e, folder: 'trash' as const } : e));
-    }
     setSelectedEmail(null);
     setDeleteTarget(null);
   };
 
   const folderLabels = { inbox: 'Caixa de entrada', sent: 'Enviados', trash: 'Lixeira' };
-  const isLoading = accountsLoading || (hasRealAccounts && emailsLoading);
+  const isLoading = accountsLoading || emailsLoading;
 
   if (accountsLoading) {
     return (
@@ -112,7 +96,7 @@ export default function MailPage({ folder }: MailPageProps) {
     );
   }
 
-  if (!hasRealAccounts && mockAccounts.length === 0) {
+  if (accounts.length === 0) {
     return (
       <EmptyState
         icon={Mail}
@@ -126,7 +110,6 @@ export default function MailPage({ folder }: MailPageProps) {
 
   return (
     <div className="flex h-full">
-      {/* Email list panel */}
       <div className={cn(
         'flex flex-col border-r w-full lg:w-[380px] shrink-0',
         selectedEmail && 'hidden lg:flex'
@@ -140,7 +123,6 @@ export default function MailPage({ folder }: MailPageProps) {
           <div className="flex-1" />
         </div>
 
-        {/* Account filter */}
         <div className="flex gap-1.5 overflow-x-auto border-b px-4 py-2 scrollbar-thin">
           <Button
             variant={filterAccount === null ? 'secondary' : 'ghost'}
@@ -150,7 +132,7 @@ export default function MailPage({ folder }: MailPageProps) {
           >
             Todas
           </Button>
-          {displayAccounts.map((acc) => (
+          {accounts.map((acc) => (
             <Button
               key={acc.id}
               variant={filterAccount === acc.id ? 'secondary' : 'ghost'}
@@ -178,7 +160,6 @@ export default function MailPage({ folder }: MailPageProps) {
         )}
       </div>
 
-      {/* Email viewer panel */}
       <div className={cn(
         'flex-1 min-w-0',
         !selectedEmail && 'hidden lg:flex'
