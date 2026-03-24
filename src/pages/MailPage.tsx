@@ -148,6 +148,20 @@ export default function MailPage({ folder }: MailPageProps) {
     setDeleteTarget(null);
   };
 
+  const handleArchive = async (emailId: string) => {
+    const [accountId, uidStr] = emailId.split('::');
+    const uid = parseInt(uidStr);
+
+    try {
+      await archiveEmail.mutateAsync({ account_id: accountId, uid, folder });
+    } catch {
+      // Error handled by mutation
+    }
+
+    bodyCache.current.delete(emailId);
+    setSelectedEmail(null);
+  };
+
   const folderLabels = { inbox: 'Caixa de entrada', sent: 'Enviados', trash: 'Lixeira' };
   const isLoading = accountsLoading || emailsLoading;
   const showViewer = selectedEmail || composing;
