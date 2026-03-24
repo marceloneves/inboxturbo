@@ -301,6 +301,16 @@ export default function MailPage({ folder }: MailPageProps) {
         onConfirm={() => deleteTarget && handleDelete(deleteTarget)}
         variant="destructive"
       />
+
+      <ConfirmDialog
+        open={emptyTrashConfirm}
+        onOpenChange={() => setEmptyTrashConfirm(false)}
+        title="Esvaziar lixeira"
+        description="Todos os e-mails na lixeira serão excluídos permanentemente. Esta ação não pode ser desfeita."
+        confirmLabel="Esvaziar"
+        onConfirm={handleEmptyTrash}
+        variant="destructive"
+      />
     </div>
   );
 }
