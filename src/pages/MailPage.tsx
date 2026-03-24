@@ -217,6 +217,22 @@ export default function MailPage({ folder }: MailPageProps) {
             ({filteredEmails.length})
           </span>
           {isLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+          {folder === 'trash' && filteredEmails.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs text-destructive hover:text-destructive"
+              onClick={() => setEmptyTrashConfirm(true)}
+              disabled={emptyTrash.isPending}
+            >
+              {emptyTrash.isPending ? (
+                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+              ) : (
+                <Trash2 className="h-3 w-3 mr-1" />
+              )}
+              Esvaziar lixeira
+            </Button>
+          )}
           <div className="flex-1" />
           <div className="flex items-center gap-1.5">
             <Filter className="h-3.5 w-3.5 text-muted-foreground" />
