@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useEmailAccounts } from './useEmailAccounts';
+import { useUserPreferences } from './useUserPreferences';
 
 export interface RemoteEmail {
   uid: number;
