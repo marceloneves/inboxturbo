@@ -269,6 +269,8 @@ export const pt = {
     assignLabel: 'Atribuir etiqueta',
     removeLabel: 'Remover etiqueta',
     manageLabels: 'Gerenciar etiquetas',
+    editLabel: 'Editar etiqueta',
+    labelUpdated: 'Etiqueta atualizada!',
   },
   pinned: {
     pinned: 'Fixado',
