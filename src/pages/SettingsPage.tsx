@@ -36,6 +36,7 @@ export default function SettingsPage() {
   const { updatePassword } = useAuth();
   const { accounts } = useEmailAccounts();
   const { preferences, updatePreferences } = useUserPreferences();
+  const { theme, toggleTheme } = useTheme();
   const [changingPw, setChangingPw] = useState(false);
   const [defaultAccount, setDefaultAccount] = useState(
     accounts.find((a) => a.is_default_sender)?.id || ''
