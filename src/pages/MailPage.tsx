@@ -1,10 +1,11 @@
 import { useState, useMemo, useCallback, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Inbox, Mail, Loader2, Filter } from 'lucide-react';
+import { Inbox, Mail, Loader2, Filter, Trash2 } from 'lucide-react';
 import { useEmailAccounts } from '@/hooks/useEmailAccounts';
 import { useEmails } from '@/hooks/useEmails';
 import { useDeleteEmail } from '@/hooks/useDeleteEmail';
 import { useArchiveEmail } from '@/hooks/useArchiveEmail';
+import { useEmptyTrash } from '@/hooks/useEmptyTrash';
 import { supabase } from '@/integrations/supabase/client';
 import { EmailList } from '@/components/EmailList';
 import { EmailViewer } from '@/components/EmailViewer';
@@ -12,6 +13,7 @@ import { ComposeInline } from '@/components/ComposeInline';
 import { EmptyState } from '@/components/EmptyState';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Email } from '@/types/email';
 
@@ -29,9 +31,11 @@ export default function MailPage({ folder }: MailPageProps) {
   const { emails: remoteEmails, isLoading: emailsLoading, fetchEmailBody } = useEmails(folder);
   const deleteEmail = useDeleteEmail();
   const archiveEmail = useArchiveEmail();
+  const emptyTrash = useEmptyTrash();
 
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [emptyTrashConfirm, setEmptyTrashConfirm] = useState(false);
   const [filterAccount, setFilterAccount] = useState<string>('all');
   const [loadingBody, setLoadingBody] = useState(false);
 
@@ -162,6 +166,21 @@ export default function MailPage({ folder }: MailPageProps) {
     setSelectedEmail(null);
   };
 
+  const handleEmptyTrash = async () => {
+    setEmptyTrashConfirm(false);
+    setSelectedEmail(null);
+    bodyCache.current.clear();
+    // Empty trash for all accounts (or filtered account)
+    const targetAccounts = filterAccount === 'all' ? accounts : accounts.filter(a => a.id === filterAccount);
+    for (const acc of targetAccounts) {
+      try {
+        await emptyTrash.mutateAsync(acc.id);
+      } catch {
+        // Error handled by mutation
+      }
+    }
+  };
+
   const folderLabels: Record<string, string> = { inbox: 'Caixa de entrada', sent: 'Enviados', archive: 'Arquivo', trash: 'Lixeira' };
   const isLoading = accountsLoading || emailsLoading;
   const showViewer = selectedEmail || composing;
@@ -198,6 +217,22 @@ export default function MailPage({ folder }: MailPageProps) {
             ({filteredEmails.length})
           </span>
           {isLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+          {folder === 'trash' && filteredEmails.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs text-destructive hover:text-destructive"
+              onClick={() => setEmptyTrashConfirm(true)}
+              disabled={emptyTrash.isPending}
+            >
+              {emptyTrash.isPending ? (
+                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+              ) : (
+                <Trash2 className="h-3 w-3 mr-1" />
+              )}
+              Esvaziar lixeira
+            </Button>
+          )}
           <div className="flex-1" />
           <div className="flex items-center gap-1.5">
             <Filter className="h-3.5 w-3.5 text-muted-foreground" />
@@ -264,6 +299,16 @@ export default function MailPage({ folder }: MailPageProps) {
         description={folder === 'trash' ? 'Este e-mail será excluído permanentemente.' : 'Este e-mail será movido para a lixeira.'}
         confirmLabel="Excluir"
         onConfirm={() => deleteTarget && handleDelete(deleteTarget)}
+        variant="destructive"
+      />
+
+      <ConfirmDialog
+        open={emptyTrashConfirm}
+        onOpenChange={() => setEmptyTrashConfirm(false)}
+        title="Esvaziar lixeira"
+        description="Todos os e-mails na lixeira serão excluídos permanentemente. Esta ação não pode ser desfeita."
+        confirmLabel="Esvaziar"
+        onConfirm={handleEmptyTrash}
         variant="destructive"
       />
     </div>
