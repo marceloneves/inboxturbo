@@ -4,6 +4,7 @@ import { Inbox, Mail, Loader2, Filter } from 'lucide-react';
 import { useEmailAccounts } from '@/hooks/useEmailAccounts';
 import { useEmails } from '@/hooks/useEmails';
 import { useDeleteEmail } from '@/hooks/useDeleteEmail';
+import { useArchiveEmail } from '@/hooks/useArchiveEmail';
 import { supabase } from '@/integrations/supabase/client';
 import { EmailList } from '@/components/EmailList';
 import { EmailViewer } from '@/components/EmailViewer';
