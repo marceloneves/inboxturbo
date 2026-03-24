@@ -187,10 +187,10 @@ export default function MailPage({ folder }: MailPageProps) {
   const isLoading = accountsLoading || emailsLoading;
   const showViewer = selectedEmail || composing;
 
-  // Helper to get label colors for an email
-  const getLabelColors = (email: Email) => {
+  // Helper to get labels for an email
+  const getEmailLabels = (email: Email) => {
     const [accId, uidStr] = email.id.split('::');
-    return getLabelsForEmail(accId, parseInt(uidStr)).map(l => l.color);
+    return getLabelsForEmail(accId, parseInt(uidStr));
   };
 
   const getIsPinned = (email: Email) => {
