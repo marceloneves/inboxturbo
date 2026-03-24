@@ -44,31 +44,35 @@ export default function MailPage({ folder }: MailPageProps) {
 
   // Track locally-read email IDs so the list updates instantly
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
+  // Track locally-removed email IDs for instant visual removal
+  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
 
   // Cache loaded email bodies to avoid re-fetching
   const bodyCache = useRef<Map<string, { body: string; to: string[]; cc?: string[] }>>(new Map());
 
   const convertedEmails: Email[] = useMemo(() => {
-    return remoteEmails.map((re) => {
-      const id = `${re.account_id}::${re.uid}`;
-      return {
-        id,
-        account_id: re.account_id,
-        account_name: re.account_name,
-        from: re.from,
-        from_email: re.from_email,
-        to: re.to,
-        cc: re.cc,
-        subject: re.subject,
-        preview: re.preview || re.subject,
-        body: re.body || undefined,
-        date: re.date,
-        is_read: re.is_read || readIds.has(id),
-        folder,
-        has_attachments: re.has_attachments,
-      };
-    });
-  }, [remoteEmails, folder, readIds]);
+    return remoteEmails
+      .filter((re) => !removedIds.has(`${re.account_id}::${re.uid}`))
+      .map((re) => {
+        const id = `${re.account_id}::${re.uid}`;
+        return {
+          id,
+          account_id: re.account_id,
+          account_name: re.account_name,
+          from: re.from,
+          from_email: re.from_email,
+          to: re.to,
+          cc: re.cc,
+          subject: re.subject,
+          preview: re.preview || re.subject,
+          body: re.body || undefined,
+          date: re.date,
+          is_read: re.is_read || readIds.has(id),
+          folder,
+          has_attachments: re.has_attachments,
+        };
+      });
+  }, [remoteEmails, folder, readIds, removedIds]);
 
   const filteredEmails = useMemo(() => {
     let result = convertedEmails;
@@ -144,29 +148,35 @@ export default function MailPage({ folder }: MailPageProps) {
     const [accountId, uidStr] = emailId.split('::');
     const uid = parseInt(uidStr);
 
-    try {
-      await deleteEmail.mutateAsync({ account_id: accountId, uid, folder });
-    } catch {
-      // Error handled by mutation
-    }
-
+    // Instantly remove from UI
+    setRemovedIds((prev) => new Set(prev).add(emailId));
     bodyCache.current.delete(emailId);
     setSelectedEmail(null);
     setDeleteTarget(null);
+
+    try {
+      await deleteEmail.mutateAsync({ account_id: accountId, uid, folder });
+    } catch {
+      // Revert on error
+      setRemovedIds((prev) => { const next = new Set(prev); next.delete(emailId); return next; });
+    }
   };
 
   const handleArchive = async (emailId: string) => {
     const [accountId, uidStr] = emailId.split('::');
     const uid = parseInt(uidStr);
 
+    // Instantly remove from UI
+    setRemovedIds((prev) => new Set(prev).add(emailId));
+    bodyCache.current.delete(emailId);
+    setSelectedEmail(null);
+
     try {
       await archiveEmail.mutateAsync({ account_id: accountId, uid, folder });
     } catch {
-      // Error handled by mutation
+      // Revert on error
+      setRemovedIds((prev) => { const next = new Set(prev); next.delete(emailId); return next; });
     }
-
-    bodyCache.current.delete(emailId);
-    setSelectedEmail(null);
   };
 
   const handleEmptyTrash = async () => {
