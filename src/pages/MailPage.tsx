@@ -34,6 +34,7 @@ export default function MailPage({ folder }: MailPageProps) {
   const deleteEmail = useDeleteEmail();
   const archiveEmail = useArchiveEmail();
   const emptyTrash = useEmptyTrash();
+  const isMobile = useIsMobile();
 
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
