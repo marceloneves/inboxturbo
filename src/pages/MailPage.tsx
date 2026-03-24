@@ -43,7 +43,7 @@ export default function MailPage({ folder }: MailPageProps) {
       cc: re.cc,
       subject: re.subject,
       preview: re.preview || re.subject,
-      body: re.body || '',
+      body: re.body || undefined,
       date: re.date,
       is_read: re.is_read,
       folder,
@@ -67,7 +67,7 @@ export default function MailPage({ folder }: MailPageProps) {
 
   const handleSelectEmail = async (email: Email) => {
     setComposing(false);
-    if (!email.body) {
+    if (!email.body || email.body.length === 0) {
       setSelectedEmail({ ...email, body: '<p>Carregando...</p>' });
       setLoadingBody(true);
       const parts = email.id.split('-');

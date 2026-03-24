@@ -238,7 +238,13 @@ Deno.serve(async (req) => {
 
 function hasAttachments(bodyStructure: unknown): boolean {
   if (!bodyStructure) return false;
-  const bs = bodyStructure as { type?: string; disposition?: string; childNodes?: unknown[] };
+  const bs = bodyStructure as {
+    type?: string;
+    disposition?: string;
+    dispositionParameters?: { filename?: string };
+    childNodes?: unknown[];
+  };
+  // Only count explicit "attachment" disposition, ignore inline images (signatures, etc.)
   if (bs.disposition === "attachment") return true;
   if (bs.childNodes) {
     return bs.childNodes.some((child) => hasAttachments(child));
