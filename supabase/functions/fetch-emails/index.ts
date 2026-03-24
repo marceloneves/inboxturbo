@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
         offset += chunk.length;
       }
 
-      const parsed = await simpleParser(buffer);
+      const parsed = await simpleParser(Buffer.from(buffer));
 
       await client.logout();
 
