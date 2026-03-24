@@ -134,11 +134,32 @@ Deno.serve(async (req) => {
       }
     }
 
+    // If no archive folder found, create one and retry
+    if (!moved) {
+      try {
+        await client.mailboxCreate("Archive");
+        // Re-open original folder since mailboxCreate may change context
+        await client.mailboxOpen(imapFolder);
+        await client.messageMove(uid.toString(), "Archive", { uid: true });
+        moved = true;
+      } catch {
+        // Last resort: try creating under INBOX namespace
+        try {
+          await client.mailboxCreate("INBOX.Archive");
+          await client.mailboxOpen(imapFolder);
+          await client.messageMove(uid.toString(), "INBOX.Archive", { uid: true });
+          moved = true;
+        } catch {
+          // Give up
+        }
+      }
+    }
+
     if (!moved) {
       await client.logout();
       return new Response(
-        JSON.stringify({ error: "Pasta de arquivo não encontrada no servidor de e-mail" }),
-        { status: 404, headers: corsHeaders }
+        JSON.stringify({ error: "Não foi possível criar ou encontrar a pasta de arquivo" }),
+        { status: 500, headers: corsHeaders }
       );
     }
 
