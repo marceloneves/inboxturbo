@@ -34,7 +34,7 @@ export default function MailPage({ folder }: MailPageProps) {
 
   const convertedEmails: Email[] = useMemo(() => {
     return remoteEmails.map((re) => ({
-      id: `${re.account_id}-${re.uid}`,
+      id: `${re.account_id}::${re.uid}`,
       account_id: re.account_id,
       account_name: re.account_name,
       from: re.from,
@@ -70,9 +70,8 @@ export default function MailPage({ folder }: MailPageProps) {
     if (!email.body || email.body.length === 0) {
       setSelectedEmail({ ...email, body: '<p>Carregando...</p>' });
       setLoadingBody(true);
-      const parts = email.id.split('-');
-      const accountId = parts[0];
-      const uid = parseInt(parts.slice(1).join('-'));
+      const [accountId, uidStr] = email.id.split('::');
+      const uid = parseInt(uidStr);
       const fullEmail = await fetchEmailBody(accountId, uid);
       if (fullEmail) {
         setSelectedEmail({
@@ -89,9 +88,8 @@ export default function MailPage({ folder }: MailPageProps) {
   };
 
   const handleDelete = async (emailId: string) => {
-    const parts = emailId.split('-');
-    const accountId = parts[0];
-    const uid = parseInt(parts.slice(1).join('-'));
+    const [accountId, uidStr] = emailId.split('::');
+    const uid = parseInt(uidStr);
 
     try {
       await deleteEmail.mutateAsync({ account_id: accountId, uid, folder });
