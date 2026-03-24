@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
     const folderMap: Record<string, string> = {
       inbox: "INBOX",
       sent: "[Gmail]/Enviados",
-      archive: "[Gmail]/Todos os e-mails",
+      archive: "Archive",
       trash: "[Gmail]/Lixeira",
       INBOX: "INBOX",
     };
