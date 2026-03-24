@@ -328,7 +328,7 @@ export default function MailPage({ folder }: MailPageProps) {
         </>
       ) : (
         <ResizablePanelGroup direction="horizontal" autoSaveId="mail-panel-sizes">
-          <ResizablePanel defaultSize={30} minSize={20} maxSize={50}>
+          <ResizablePanel defaultSize={38} minSize={25} maxSize={55}>
             <div className="flex h-full flex-col">
               <ListHeader />
               {filteredEmails.length === 0 ? (
