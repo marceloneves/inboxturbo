@@ -83,24 +83,30 @@ Deno.serve(async (req) => {
     const folderMap: Record<string, string> = {
       inbox: "INBOX",
       sent: "[Gmail]/Enviados",
+      archive: "Archive",
       trash: "[Gmail]/Lixeira",
       INBOX: "INBOX",
     };
 
     const imapFolder = folderMap[folder] || folder;
     let mailbox;
+    let openedFolder = imapFolder;
     try {
       mailbox = await client.mailboxOpen(imapFolder);
-    } catch {
+    } catch (e) {
+      console.log(`Could not open ${imapFolder}: ${e.message}`);
       const alternatives: Record<string, string[]> = {
         inbox: ["INBOX"],
         sent: ["Sent", "INBOX.Sent", "[Gmail]/Sent Mail", "Sent Items"],
+        archive: ["INBOX.Archive", "Archives", "INBOX.Archives"],
         trash: ["Trash", "INBOX.Trash", "[Gmail]/Trash", "Deleted Items"],
       };
       const alts = alternatives[folder] || [];
       for (const alt of alts) {
         try {
           mailbox = await client.mailboxOpen(alt);
+          openedFolder = alt;
+          console.log(`Opened alternative folder: ${alt}`);
           break;
         } catch {
           continue;
@@ -115,9 +121,10 @@ Deno.serve(async (req) => {
       }
     }
 
+    console.log(`Folder opened: ${openedFolder}, exists: ${mailbox.exists}, deleting UID: ${uid}`);
+
     // Try to move to trash first, if not already in trash
     if (folder !== "trash") {
-      // Try to find the trash folder
       const trashFolders = [
         "[Gmail]/Lixeira",
         "[Gmail]/Trash",
@@ -129,23 +136,38 @@ Deno.serve(async (req) => {
       let moved = false;
       for (const trashFolder of trashFolders) {
         try {
-          await client.messageMove(uid.toString(), trashFolder, { uid: true });
+          const result = await client.messageMove(uid.toString(), trashFolder, { uid: true });
+          console.log(`Moved UID ${uid} to ${trashFolder}, result: ${JSON.stringify(result)}`);
           moved = true;
           break;
-        } catch {
+        } catch (e) {
+          console.log(`Move to ${trashFolder} failed: ${e.message}`);
           continue;
         }
       }
 
       if (!moved) {
-        // If can't move, flag as deleted
-        await client.messageFlagsAdd(uid.toString(), ["\\Deleted"], { uid: true });
-        await client.messageDelete(uid.toString(), { uid: true });
+        // If can't move, flag as deleted and expunge
+        console.log(`Could not move, flagging UID ${uid} as deleted`);
+        try {
+          await client.messageFlagsAdd(uid.toString(), ["\\Deleted"], { uid: true });
+          await client.messageDelete(uid.toString(), { uid: true });
+          console.log(`Flagged and deleted UID ${uid}`);
+        } catch (e) {
+          console.error(`Flag/delete failed: ${e.message}`);
+          throw e;
+        }
       }
     } else {
       // Already in trash — permanently delete
-      await client.messageFlagsAdd(uid.toString(), ["\\Deleted"], { uid: true });
-      await client.messageDelete(uid.toString(), { uid: true });
+      try {
+        await client.messageFlagsAdd(uid.toString(), ["\\Deleted"], { uid: true });
+        await client.messageDelete(uid.toString(), { uid: true });
+        console.log(`Permanently deleted UID ${uid} from trash`);
+      } catch (e) {
+        console.error(`Permanent delete failed: ${e.message}`);
+        throw e;
+      }
     }
 
     await client.logout();
