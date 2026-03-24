@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Loader2, X } from 'lucide-react';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -10,7 +11,6 @@ import { AccountSelector } from '@/components/AccountSelector';
 import { useEmailAccounts } from '@/hooks/useEmailAccounts';
 import { useSendEmail } from '@/hooks/useSendEmail';
 import { toast } from 'sonner';
-import { useState } from 'react';
 
 const composeSchema = z.object({
   to: z.string().email('E-mail inválido').max(255),
