@@ -42,6 +42,7 @@ const App = () => (
               <Route path="compose" element={<Navigate to="/app/inbox" replace />} />
               <Route path="perfil" element={<ProfilePage />} />
               <Route path="configuracoes" element={<SettingsPage />} />
+              <Route path="estatisticas" element={<StatsPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
