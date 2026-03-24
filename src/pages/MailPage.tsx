@@ -210,90 +210,112 @@ export default function MailPage({ folder }: MailPageProps) {
 
   return (
     <div className="flex h-full">
-      <div className={cn(
-        'flex flex-col border-r w-full lg:w-[380px] shrink-0',
-        showViewer && 'hidden lg:flex'
-      )}>
-        <div className="flex items-center gap-2 border-b px-4 py-2.5">
-          <h2 className="font-semibold text-sm">{folderLabels[folder]}</h2>
-          <span className="text-xs text-muted-foreground">
-            ({filteredEmails.length})
-          </span>
-          {isLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
-          {folder === 'trash' && filteredEmails.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs text-destructive hover:text-destructive"
-              onClick={() => setEmptyTrashConfirm(true)}
-              disabled={emptyTrash.isPending}
-            >
-              {emptyTrash.isPending ? (
-                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-              ) : (
-                <Trash2 className="h-3 w-3 mr-1" />
+    {isMobile ? (
+      <>
+        {showViewer ? (
+          <div className="flex-1 min-w-0">
+            {composing ? (
+              <ComposeInline onClose={() => setComposing(false)} />
+            ) : selectedEmail ? (
+              <EmailViewer
+                email={selectedEmail}
+                onBack={() => setSelectedEmail(null)}
+                onDelete={(id) => setDeleteTarget(id)}
+                onArchive={folder !== 'archive' ? handleArchive : undefined}
+                isDeleting={deleteEmail.isPending}
+                isArchiving={archiveEmail.isPending}
+              />
+            ) : null}
+          </div>
+        ) : (
+          <div className="flex flex-col w-full">
+            <div className="flex items-center gap-2 border-b px-4 py-2.5">
+              <h2 className="font-semibold text-sm">{folderLabels[folder]}</h2>
+              <span className="text-xs text-muted-foreground">({filteredEmails.length})</span>
+              {isLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+              {folder === 'trash' && filteredEmails.length > 0 && (
+                <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive hover:text-destructive" onClick={() => setEmptyTrashConfirm(true)} disabled={emptyTrash.isPending}>
+                  {emptyTrash.isPending ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Trash2 className="h-3 w-3 mr-1" />}
+                  Esvaziar lixeira
+                </Button>
               )}
-              Esvaziar lixeira
-            </Button>
-          )}
-          <div className="flex-1" />
-          <div className="flex items-center gap-1.5">
-            <Filter className="h-3.5 w-3.5 text-muted-foreground" />
-            <Select value={filterAccount} onValueChange={setFilterAccount}>
-              <SelectTrigger className="h-7 w-[160px] text-xs border-0 bg-muted/50">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as contas</SelectItem>
-                {accounts.map((acc) => (
-                  <SelectItem key={acc.id} value={acc.id}>
-                    {acc.friendly_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {filteredEmails.length === 0 ? (
-          <EmptyState
-            icon={Inbox}
-            title="Nenhum e-mail"
-            description={isLoading ? 'Carregando e-mails...' : folder === 'inbox' ? 'Sua caixa de entrada está vazia.' : 'Nenhuma mensagem encontrada.'}
-          />
-        ) : (
-          <EmailList
-            emails={filteredEmails}
-            activeEmailId={selectedEmail?.id || null}
-            onSelectEmail={handleSelectEmail}
-          />
-        )}
-      </div>
-
-      <div className={cn(
-        'flex-1 min-w-0',
-        !showViewer && 'hidden lg:flex'
-      )}>
-        {composing ? (
-          <ComposeInline onClose={() => setComposing(false)} />
-        ) : selectedEmail ? (
-          <EmailViewer
-            email={selectedEmail}
-            onBack={() => setSelectedEmail(null)}
-            onDelete={(id) => setDeleteTarget(id)}
-            onArchive={folder !== 'archive' ? handleArchive : undefined}
-            isDeleting={deleteEmail.isPending}
-            isArchiving={archiveEmail.isPending}
-          />
-        ) : (
-          <div className="hidden lg:flex h-full items-center justify-center">
-            <div className="text-center text-muted-foreground">
-              <Mail className="mx-auto h-12 w-12 mb-3 opacity-30" />
-              <p className="text-sm">Selecione uma mensagem para ler</p>
+              <div className="flex-1" />
+              <div className="flex items-center gap-1.5">
+                <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+                <Select value={filterAccount} onValueChange={setFilterAccount}>
+                  <SelectTrigger className="h-7 w-[160px] text-xs border-0 bg-muted/50"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as contas</SelectItem>
+                    {accounts.map((acc) => (<SelectItem key={acc.id} value={acc.id}>{acc.friendly_name}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+            {filteredEmails.length === 0 ? (
+              <EmptyState icon={Inbox} title="Nenhum e-mail" description={isLoading ? 'Carregando e-mails...' : folder === 'inbox' ? 'Sua caixa de entrada está vazia.' : 'Nenhuma mensagem encontrada.'} />
+            ) : (
+              <EmailList emails={filteredEmails} activeEmailId={selectedEmail?.id || null} onSelectEmail={handleSelectEmail} />
+            )}
           </div>
         )}
-      </div>
+      </>
+    ) : (
+      <ResizablePanelGroup direction="horizontal">
+        <ResizablePanel defaultSize={30} minSize={20} maxSize={50}>
+          <div className="flex h-full flex-col">
+            <div className="flex items-center gap-2 border-b px-4 py-2.5">
+              <h2 className="font-semibold text-sm">{folderLabels[folder]}</h2>
+              <span className="text-xs text-muted-foreground">({filteredEmails.length})</span>
+              {isLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+              {folder === 'trash' && filteredEmails.length > 0 && (
+                <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive hover:text-destructive" onClick={() => setEmptyTrashConfirm(true)} disabled={emptyTrash.isPending}>
+                  {emptyTrash.isPending ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Trash2 className="h-3 w-3 mr-1" />}
+                  Esvaziar lixeira
+                </Button>
+              )}
+              <div className="flex-1" />
+              <div className="flex items-center gap-1.5">
+                <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+                <Select value={filterAccount} onValueChange={setFilterAccount}>
+                  <SelectTrigger className="h-7 w-[160px] text-xs border-0 bg-muted/50"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as contas</SelectItem>
+                    {accounts.map((acc) => (<SelectItem key={acc.id} value={acc.id}>{acc.friendly_name}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {filteredEmails.length === 0 ? (
+              <EmptyState icon={Inbox} title="Nenhum e-mail" description={isLoading ? 'Carregando e-mails...' : folder === 'inbox' ? 'Sua caixa de entrada está vazia.' : 'Nenhuma mensagem encontrada.'} />
+            ) : (
+              <EmailList emails={filteredEmails} activeEmailId={selectedEmail?.id || null} onSelectEmail={handleSelectEmail} />
+            )}
+          </div>
+        </ResizablePanel>
+        <ResizableHandle />
+        <ResizablePanel defaultSize={70}>
+          {composing ? (
+            <ComposeInline onClose={() => setComposing(false)} />
+          ) : selectedEmail ? (
+            <EmailViewer
+              email={selectedEmail}
+              onBack={() => setSelectedEmail(null)}
+              onDelete={(id) => setDeleteTarget(id)}
+              onArchive={folder !== 'archive' ? handleArchive : undefined}
+              isDeleting={deleteEmail.isPending}
+              isArchiving={archiveEmail.isPending}
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center">
+              <div className="text-center text-muted-foreground">
+                <Mail className="mx-auto h-12 w-12 mb-3 opacity-30" />
+                <p className="text-sm">Selecione uma mensagem para ler</p>
+              </div>
+            </div>
+          )}
+        </ResizablePanel>
+      </ResizablePanelGroup>
+    )}
 
       <ConfirmDialog
         open={!!deleteTarget}
