@@ -6,9 +6,9 @@ import { useEmails } from '@/hooks/useEmails';
 import { useDeleteEmail } from '@/hooks/useDeleteEmail';
 import { EmailList } from '@/components/EmailList';
 import { EmailViewer } from '@/components/EmailViewer';
+import { ComposeInline } from '@/components/ComposeInline';
 import { EmptyState } from '@/components/EmptyState';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { ReplyEmailModal } from '@/components/ReplyEmailModal';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Email } from '@/types/email';
@@ -18,7 +18,11 @@ interface MailPageProps {
 }
 
 export default function MailPage({ folder }: MailPageProps) {
-  const { searchQuery } = useOutletContext<{ searchQuery: string }>();
+  const { searchQuery, composing, setComposing } = useOutletContext<{
+    searchQuery: string;
+    composing: boolean;
+    setComposing: (v: boolean) => void;
+  }>();
   const { accounts, isLoading: accountsLoading } = useEmailAccounts();
   const { emails: remoteEmails, isLoading: emailsLoading, fetchEmailBody } = useEmails(folder);
   const deleteEmail = useDeleteEmail();
@@ -27,7 +31,6 @@ export default function MailPage({ folder }: MailPageProps) {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [filterAccount, setFilterAccount] = useState<string | null>(null);
   const [loadingBody, setLoadingBody] = useState(false);
-  const [replyEmail, setReplyEmail] = useState<Email | null>(null);
 
   const convertedEmails: Email[] = useMemo(() => {
     return remoteEmails.map((re) => ({
@@ -63,6 +66,7 @@ export default function MailPage({ folder }: MailPageProps) {
   }, [convertedEmails, filterAccount, searchQuery]);
 
   const handleSelectEmail = async (email: Email) => {
+    setComposing(false);
     if (!email.body) {
       setSelectedEmail({ ...email, body: '<p>Carregando...</p>' });
       setLoadingBody(true);
@@ -99,8 +103,14 @@ export default function MailPage({ folder }: MailPageProps) {
     setDeleteTarget(null);
   };
 
+  const handleCompose = () => {
+    setSelectedEmail(null);
+    setComposing(true);
+  };
+
   const folderLabels = { inbox: 'Caixa de entrada', sent: 'Enviados', trash: 'Lixeira' };
   const isLoading = accountsLoading || emailsLoading;
+  const showViewer = selectedEmail || composing;
 
   if (accountsLoading) {
     return (
@@ -126,7 +136,7 @@ export default function MailPage({ folder }: MailPageProps) {
     <div className="flex h-full">
       <div className={cn(
         'flex flex-col border-r w-full lg:w-[380px] shrink-0',
-        selectedEmail && 'hidden lg:flex'
+        showViewer && 'hidden lg:flex'
       )}>
         <div className="flex items-center gap-2 border-b px-4 py-2.5">
           <h2 className="font-semibold text-sm">{folderLabels[folder]}</h2>
@@ -176,14 +186,15 @@ export default function MailPage({ folder }: MailPageProps) {
 
       <div className={cn(
         'flex-1 min-w-0',
-        !selectedEmail && 'hidden lg:flex'
+        !showViewer && 'hidden lg:flex'
       )}>
-        {selectedEmail ? (
+        {composing ? (
+          <ComposeInline onClose={() => setComposing(false)} />
+        ) : selectedEmail ? (
           <EmailViewer
             email={selectedEmail}
             onBack={() => setSelectedEmail(null)}
             onDelete={(id) => setDeleteTarget(id)}
-            onReply={() => setReplyEmail(selectedEmail)}
             isDeleting={deleteEmail.isPending}
           />
         ) : (
@@ -204,12 +215,6 @@ export default function MailPage({ folder }: MailPageProps) {
         confirmLabel="Excluir"
         onConfirm={() => deleteTarget && handleDelete(deleteTarget)}
         variant="destructive"
-      />
-
-      <ReplyEmailModal
-        open={!!replyEmail}
-        onClose={() => setReplyEmail(null)}
-        originalEmail={replyEmail!}
       />
     </div>
   );
