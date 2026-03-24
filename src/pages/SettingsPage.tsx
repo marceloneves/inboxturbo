@@ -65,6 +65,21 @@ export default function SettingsPage() {
         <p className="text-sm text-muted-foreground mt-1">Personalize sua experiência</p>
       </div>
 
+      {/* Theme */}
+      <div className="rounded-xl border bg-card p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Palette className="h-4 w-4 text-muted-foreground" />
+          <h2 className="font-semibold">Tema</h2>
+        </div>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium">Modo escuro</p>
+            <p className="text-xs text-muted-foreground">Alterne entre tema claro e escuro</p>
+          </div>
+          <Switch checked={theme === 'dark'} onCheckedChange={toggleTheme} />
+        </div>
+      </div>
+
       {/* Fetch interval */}
       <div className="rounded-xl border bg-card p-6">
         <div className="flex items-center gap-2 mb-4">
