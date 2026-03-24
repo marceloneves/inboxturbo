@@ -6,45 +6,47 @@ import { useAuth } from '@/hooks/useAuth';
 import { useEmailAccounts } from '@/hooks/useEmailAccounts';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useTheme } from '@/hooks/useTheme';
+import { useI18n, type Locale } from '@/i18n';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { Loader2, Lock, RefreshCw, Palette } from 'lucide-react';
-
-const passwordSchema = z.object({
-  currentPassword: z.string().min(1, 'Obrigatório'),
-  newPassword: z.string().min(6, 'Mínimo 6 caracteres'),
-  confirmPassword: z.string(),
-}).refine((d) => d.newPassword === d.confirmPassword, {
-  message: 'Senhas não conferem', path: ['confirmPassword'],
-});
-
-const intervalOptions = [
-  { value: '30', label: '30 segundos' },
-  { value: '60', label: '1 minuto' },
-  { value: '120', label: '2 minutos' },
-  { value: '300', label: '5 minutos' },
-  { value: '600', label: '10 minutos' },
-  { value: '900', label: '15 minutos' },
-  { value: '1800', label: '30 minutos' },
-];
+import { Loader2, Lock, RefreshCw, Palette, Globe } from 'lucide-react';
 
 export default function SettingsPage() {
   const { updatePassword } = useAuth();
   const { accounts } = useEmailAccounts();
   const { preferences, updatePreferences } = useUserPreferences();
   const { theme, toggleTheme } = useTheme();
+  const { t, locale, setLocale } = useI18n();
   const [changingPw, setChangingPw] = useState(false);
   const [defaultAccount, setDefaultAccount] = useState(
     accounts.find((a) => a.is_default_sender)?.id || ''
   );
 
+  const passwordSchema = z.object({
+    currentPassword: z.string().min(1, t.settings.required),
+    newPassword: z.string().min(6, t.auth.minChars),
+    confirmPassword: z.string(),
+  }).refine((d) => d.newPassword === d.confirmPassword, {
+    message: t.auth.passwordsDontMatch, path: ['confirmPassword'],
+  });
+
   const { register, handleSubmit, formState: { errors }, reset } = useForm({
     resolver: zodResolver(passwordSchema),
   });
+
+  const intervalOptions = [
+    { value: '30', label: t.settings.intervals['30'] },
+    { value: '60', label: t.settings.intervals['60'] },
+    { value: '120', label: t.settings.intervals['120'] },
+    { value: '300', label: t.settings.intervals['300'] },
+    { value: '600', label: t.settings.intervals['600'] },
+    { value: '900', label: t.settings.intervals['900'] },
+    { value: '1800', label: t.settings.intervals['1800'] },
+  ];
 
   const handleChangePassword = async (data: Record<string, unknown>) => {
     setChangingPw(true);
@@ -53,7 +55,7 @@ export default function SettingsPage() {
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success('Senha alterada com sucesso!');
+      toast.success(t.auth.passwordChanged);
       reset();
     }
   };
@@ -61,20 +63,37 @@ export default function SettingsPage() {
   return (
     <div className="p-6 max-w-lg mx-auto space-y-8 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold" style={{ lineHeight: '1.1' }}>Configurações</h1>
-        <p className="text-sm text-muted-foreground mt-1">Personalize sua experiência</p>
+        <h1 className="text-2xl font-bold" style={{ lineHeight: '1.1' }}>{t.settings.title}</h1>
+        <p className="text-sm text-muted-foreground mt-1">{t.settings.subtitle}</p>
+      </div>
+
+      {/* Language */}
+      <div className="rounded-xl border bg-card p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Globe className="h-4 w-4 text-muted-foreground" />
+          <h2 className="font-semibold">{t.settings.language}</h2>
+        </div>
+        <p className="text-sm text-muted-foreground mb-3">{t.settings.languageDesc}</p>
+        <Select value={locale} onValueChange={(v) => setLocale(v as Locale)}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="en">English</SelectItem>
+            <SelectItem value="es">Español</SelectItem>
+            <SelectItem value="pt">Português</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Theme */}
       <div className="rounded-xl border bg-card p-6">
         <div className="flex items-center gap-2 mb-4">
           <Palette className="h-4 w-4 text-muted-foreground" />
-          <h2 className="font-semibold">Tema</h2>
+          <h2 className="font-semibold">{t.settings.theme}</h2>
         </div>
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium">Modo escuro</p>
-            <p className="text-xs text-muted-foreground">Alterne entre tema claro e escuro</p>
+            <p className="text-sm font-medium">{t.settings.darkMode}</p>
+            <p className="text-xs text-muted-foreground">{t.settings.darkModeDesc}</p>
           </div>
           <Switch checked={theme === 'dark'} onCheckedChange={toggleTheme} />
         </div>
@@ -84,11 +103,9 @@ export default function SettingsPage() {
       <div className="rounded-xl border bg-card p-6">
         <div className="flex items-center gap-2 mb-4">
           <RefreshCw className="h-4 w-4 text-muted-foreground" />
-          <h2 className="font-semibold">Intervalo de busca de e-mails</h2>
+          <h2 className="font-semibold">{t.settings.fetchInterval}</h2>
         </div>
-        <p className="text-sm text-muted-foreground mb-3">
-          Define de quanto em quanto tempo o sistema busca novos e-mails em todas as contas conectadas.
-        </p>
+        <p className="text-sm text-muted-foreground mb-3">{t.settings.fetchIntervalDesc}</p>
         <Select
           value={String(preferences?.fetch_interval_seconds || 60)}
           onValueChange={(v) => updatePreferences.mutate({ fetch_interval_seconds: Number(v) })}
@@ -106,36 +123,36 @@ export default function SettingsPage() {
       <div className="rounded-xl border bg-card p-6">
         <div className="flex items-center gap-2 mb-4">
           <Lock className="h-4 w-4 text-muted-foreground" />
-          <h2 className="font-semibold">Alterar senha</h2>
+          <h2 className="font-semibold">{t.settings.changePassword}</h2>
         </div>
         <form onSubmit={handleSubmit(handleChangePassword)} className="space-y-3">
           <div className="space-y-1.5">
-            <Label>Senha atual</Label>
+            <Label>{t.settings.currentPassword}</Label>
             <Input type="password" {...register('currentPassword')} />
             {errors.currentPassword && <p className="text-xs text-destructive">{errors.currentPassword.message as string}</p>}
           </div>
           <div className="space-y-1.5">
-            <Label>Nova senha</Label>
+            <Label>{t.settings.newPassword}</Label>
             <Input type="password" {...register('newPassword')} />
             {errors.newPassword && <p className="text-xs text-destructive">{errors.newPassword.message as string}</p>}
           </div>
           <div className="space-y-1.5">
-            <Label>Confirmar nova senha</Label>
+            <Label>{t.settings.confirmNewPassword}</Label>
             <Input type="password" {...register('confirmPassword')} />
             {errors.confirmPassword && <p className="text-xs text-destructive">{errors.confirmPassword.message as string}</p>}
           </div>
           <Button type="submit" disabled={changingPw}>
             {changingPw && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Alterar senha
+            {t.settings.changePasswordBtn}
           </Button>
         </form>
       </div>
 
       {accounts.length > 0 && (
         <div className="rounded-xl border bg-card p-6">
-          <h2 className="font-semibold mb-4">Conta padrão de envio</h2>
-          <Select value={defaultAccount} onValueChange={(v) => { setDefaultAccount(v); toast.success('Conta padrão atualizada.'); }}>
-            <SelectTrigger><SelectValue placeholder="Selecionar conta" /></SelectTrigger>
+          <h2 className="font-semibold mb-4">{t.settings.defaultSendAccount}</h2>
+          <Select value={defaultAccount} onValueChange={(v) => { setDefaultAccount(v); toast.success(t.accounts.defaultUpdated); }}>
+            <SelectTrigger><SelectValue placeholder={t.settings.selectAccount} /></SelectTrigger>
             <SelectContent>
               {accounts.map((acc) => (
                 <SelectItem key={acc.id} value={acc.id}>
