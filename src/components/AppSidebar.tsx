@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { Inbox, Send, Trash2, Archive, Link2, UserCircle, Settings, LogOut, Mail, Menu, X } from 'lucide-react';
+import { Inbox, Send, Trash2, Archive, Link2, UserCircle, Settings, LogOut, Mail, Menu, X, BarChart3, Sun, Moon } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useTheme } from '@/hooks/useTheme';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -10,6 +11,7 @@ const navItems = [
   { label: 'Enviados', icon: Send, path: '/app/sent' },
   { label: 'Arquivo', icon: Archive, path: '/app/arquivo' },
   { label: 'Lixeira', icon: Trash2, path: '/app/trash' },
+  { label: 'Estatísticas', icon: BarChart3, path: '/app/estatisticas' },
   { label: 'Contas conectadas', icon: Link2, path: '/app/contas' },
   { label: 'Perfil', icon: UserCircle, path: '/app/perfil' },
   { label: 'Configurações', icon: Settings, path: '/app/configuracoes' },
@@ -17,6 +19,7 @@ const navItems = [
 
 export function AppSidebar() {
   const { signOut } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
@@ -57,7 +60,14 @@ export function AppSidebar() {
         ))}
       </nav>
 
-      <div className="border-t px-3 py-3">
+      <div className="border-t px-3 py-3 space-y-1">
+        <button
+          onClick={toggleTheme}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
+        >
+          {theme === 'dark' ? <Sun className="h-4 w-4 shrink-0" /> : <Moon className="h-4 w-4 shrink-0" />}
+          {!collapsed && <span>{theme === 'dark' ? 'Tema claro' : 'Tema escuro'}</span>}
+        </button>
         <button
           onClick={handleSignOut}
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent"

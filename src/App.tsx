@@ -14,6 +14,7 @@ import MailPage from "./pages/MailPage";
 import AccountsPage from "./pages/AccountsPage";
 import ProfilePage from "./pages/ProfilePage";
 import SettingsPage from "./pages/SettingsPage";
+import StatsPage from "./pages/StatsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +42,7 @@ const App = () => (
               <Route path="compose" element={<Navigate to="/app/inbox" replace />} />
               <Route path="perfil" element={<ProfilePage />} />
               <Route path="configuracoes" element={<SettingsPage />} />
+              <Route path="estatisticas" element={<StatsPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

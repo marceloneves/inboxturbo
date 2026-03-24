@@ -5,12 +5,14 @@ import { z } from 'zod';
 import { useAuth } from '@/hooks/useAuth';
 import { useEmailAccounts } from '@/hooks/useEmailAccounts';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
+import { useTheme } from '@/hooks/useTheme';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { Loader2, Lock, RefreshCw } from 'lucide-react';
+import { Loader2, Lock, RefreshCw, Palette } from 'lucide-react';
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(1, 'Obrigatório'),
@@ -34,6 +36,7 @@ export default function SettingsPage() {
   const { updatePassword } = useAuth();
   const { accounts } = useEmailAccounts();
   const { preferences, updatePreferences } = useUserPreferences();
+  const { theme, toggleTheme } = useTheme();
   const [changingPw, setChangingPw] = useState(false);
   const [defaultAccount, setDefaultAccount] = useState(
     accounts.find((a) => a.is_default_sender)?.id || ''
@@ -60,6 +63,21 @@ export default function SettingsPage() {
       <div>
         <h1 className="text-2xl font-bold" style={{ lineHeight: '1.1' }}>Configurações</h1>
         <p className="text-sm text-muted-foreground mt-1">Personalize sua experiência</p>
+      </div>
+
+      {/* Theme */}
+      <div className="rounded-xl border bg-card p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Palette className="h-4 w-4 text-muted-foreground" />
+          <h2 className="font-semibold">Tema</h2>
+        </div>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium">Modo escuro</p>
+            <p className="text-xs text-muted-foreground">Alterne entre tema claro e escuro</p>
+          </div>
+          <Switch checked={theme === 'dark'} onCheckedChange={toggleTheme} />
+        </div>
       </div>
 
       {/* Fetch interval */}
