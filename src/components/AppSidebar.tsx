@@ -94,13 +94,13 @@ export function AppSidebar() {
 
       {/* Desktop sidebar */}
       <aside className={cn(
-        'hidden lg:flex flex-col border-r bg-sidebar shrink-0 transition-all duration-300',
+        'hidden lg:flex flex-col border-r bg-sidebar shrink-0 transition-all duration-300 relative',
         collapsed ? 'w-16' : 'w-60'
       )}>
         <Button
           variant="ghost"
           size="sm"
-          className="absolute -right-3 top-6 z-10 hidden h-6 w-6 rounded-full border bg-card p-0 shadow-sm lg:flex"
+          className="absolute -right-3 top-6 z-10 h-6 w-6 rounded-full border bg-card p-0 shadow-sm"
           onClick={() => setCollapsed(!collapsed)}
         >
           <span className="text-xs">{collapsed ? '›' : '‹'}</span>
