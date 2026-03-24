@@ -29,6 +29,8 @@ export function AppSidebar() {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
+  const moveEmail = useMoveEmail();
 
   const handleSignOut = async () => {
     await signOut();
@@ -36,6 +38,30 @@ export function AppSidebar() {
   };
 
   const isActive = (path: string) => location.pathname === path;
+
+  const handleDragOver = useCallback((e: React.DragEvent, folder: string) => {
+    if (e.dataTransfer.types.includes('application/x-email-id')) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      setDragOverFolder(folder);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setDragOverFolder(null);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent, targetFolder: string) => {
+    e.preventDefault();
+    setDragOverFolder(null);
+    const emailId = e.dataTransfer.getData('application/x-email-id');
+    const sourceFolder = e.dataTransfer.getData('application/x-email-folder');
+    if (!emailId || !sourceFolder || sourceFolder === targetFolder) return;
+
+    const [accountId, uidStr] = emailId.split('::');
+    const uid = parseInt(uidStr);
+    moveEmail.mutate({ account_id: accountId, uid, source_folder: sourceFolder, target_folder: targetFolder });
+  }, [moveEmail]);
 
   const sidebarContent = (
     <>
@@ -47,7 +73,27 @@ export function AppSidebar() {
       </div>
 
       <nav className="flex-1 space-y-1 px-3 py-2">
-        {navItems.map((item) => (
+        {folderItems.map((item) => (
+          <Link
+            key={item.path}
+            to={item.path}
+            onClick={() => setMobileOpen(false)}
+            onDragOver={(e) => handleDragOver(e, item.folder)}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, item.folder)}
+            className={cn(
+              'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+              isActive(item.path)
+                ? 'bg-primary/10 text-primary'
+                : 'text-sidebar-foreground hover:bg-sidebar-accent',
+              dragOverFolder === item.folder && 'ring-2 ring-primary bg-primary/10 scale-[1.02] transition-transform'
+            )}
+          >
+            <item.icon className="h-4 w-4 shrink-0" />
+            {!collapsed && <span>{item.label}</span>}
+          </Link>
+        ))}
+        {otherItems.map((item) => (
           <Link
             key={item.path}
             to={item.path}
