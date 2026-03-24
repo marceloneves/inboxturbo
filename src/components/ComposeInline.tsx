@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/RichTextEditor';
 import { AccountSelector } from '@/components/AccountSelector';
 import { useEmailAccounts } from '@/hooks/useEmailAccounts';
 import { useSendEmail } from '@/hooks/useSendEmail';
@@ -17,7 +17,6 @@ const composeSchema = z.object({
   cc: z.string().optional(),
   bcc: z.string().optional(),
   subject: z.string().min(1, 'Assunto obrigatório').max(500),
-  body: z.string().min(1, 'Mensagem obrigatória').max(50000),
 });
 
 interface ComposeInlineProps {
@@ -27,6 +26,7 @@ interface ComposeInlineProps {
 export function ComposeInline({ onClose }: ComposeInlineProps) {
   const { accounts } = useEmailAccounts();
   const sendEmail = useSendEmail();
+  const [body, setBody] = useState('');
 
   const displayAccounts = accounts.map(a => ({
     id: a.id,
@@ -55,6 +55,11 @@ export function ComposeInline({ onClose }: ComposeInlineProps) {
       return;
     }
 
+    if (!body.trim() || body === '<p></p>') {
+      toast.error('Mensagem obrigatória.');
+      return;
+    }
+
     try {
       await sendEmail.mutateAsync({
         account_id: selectedAccount,
@@ -62,9 +67,10 @@ export function ComposeInline({ onClose }: ComposeInlineProps) {
         cc: data.cc,
         bcc: data.bcc,
         subject: data.subject,
-        body: `<p>${data.body.replace(/\n/g, '</p><p>')}</p>`,
+        body,
       });
       reset();
+      setBody('');
       onClose();
     } catch {
       // Error handled by mutation
@@ -115,14 +121,12 @@ export function ComposeInline({ onClose }: ComposeInlineProps) {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="compose-body">Mensagem</Label>
-            <Textarea
-              id="compose-body"
+            <Label>Mensagem</Label>
+            <RichTextEditor
+              onChange={setBody}
               placeholder="Escreva sua mensagem..."
-              className="min-h-[200px] resize-none"
-              {...register('body')}
+              minHeight="200px"
             />
-            {errors.body && <p className="text-xs text-destructive">{errors.body.message as string}</p>}
           </div>
         </div>
 

@@ -136,3 +136,36 @@
     border-radius: 3px;
   }
 }
+
+/* Tiptap editor styles */
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: hsl(var(--muted-foreground));
+  pointer-events: none;
+  height: 0;
+}
+
+.tiptap {
+  outline: none;
+}
+
+.tiptap ul,
+.tiptap ol {
+  padding-left: 1.5rem;
+}
+
+.tiptap ul {
+  list-style-type: disc;
+}
+
+.tiptap ol {
+  list-style-type: decimal;
+}
+
+.tiptap blockquote {
+  border-left: 2px solid hsl(var(--border));
+  padding-left: 0.75rem;
+  margin-left: 0;
+  color: hsl(var(--muted-foreground));
+}
