@@ -111,7 +111,18 @@ Deno.serve(async (req) => {
         }
       }
       if (!mailbox) {
-        mailbox = await client.mailboxOpen("INBOX");
+        await client.logout();
+        return new Response(
+          JSON.stringify({
+            emails: [],
+            total: 0,
+            page,
+            limit,
+            account_id,
+            account_name: account.friendly_name,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
     }
 
