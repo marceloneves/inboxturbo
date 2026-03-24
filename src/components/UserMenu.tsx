@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { UserCircle, Settings, LogOut } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import {
   DropdownMenu,
   DropdownMenuContent,
