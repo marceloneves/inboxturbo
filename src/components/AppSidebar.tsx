@@ -34,7 +34,7 @@ export function AppSidebar() {
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary">
           <Mail className="h-4 w-4 text-primary-foreground" />
         </div>
-        {!collapsed && <span className="text-lg font-bold tracking-tight">Mail Hub</span>}
+        {!collapsed && <span className="text-lg font-bold tracking-tight">InboxTurbo</span>}
       </div>
 
       <nav className="flex-1 space-y-1 px-3 py-2">

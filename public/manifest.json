@@ -1,6 +1,6 @@
 {
-  "name": "Mail Hub",
-  "short_name": "Mail Hub",
+  "name": "InboxTurbo",
+  "short_name": "InboxTurbo",
   "description": "Agregador de contas de e-mail em uma interface unificada",
   "start_url": "/login",
   "display": "standalone",
