@@ -13,6 +13,7 @@ import { ComposeInline } from '@/components/ComposeInline';
 import { EmptyState } from '@/components/EmptyState';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { Email } from '@/types/email';
 
