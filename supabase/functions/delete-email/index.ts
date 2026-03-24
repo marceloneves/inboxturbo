@@ -131,6 +131,7 @@ Deno.serve(async (req) => {
         "Trash",
         "INBOX.Trash",
         "Deleted Items",
+        "Deleted Messages",
       ];
 
       let moved = false;
@@ -138,6 +139,9 @@ Deno.serve(async (req) => {
         try {
           const result = await client.messageMove(uid.toString(), trashFolder, { uid: true });
           console.log(`Moved UID ${uid} to ${trashFolder}, result: ${JSON.stringify(result)}`);
+
+          // Some servers return false even when the command is accepted.
+          // In these cases we still force removal from the source folder below.
           moved = true;
           break;
         } catch (e) {
@@ -146,17 +150,23 @@ Deno.serve(async (req) => {
         }
       }
 
+      // Ensure the message is actually removed from the source folder.
+      // This fixes providers where MOVE behaves like COPY or returns ambiguous results.
+      try {
+        await client.mailboxOpen(openedFolder);
+        await client.messageFlagsAdd(uid.toString(), ["\\Deleted"], { uid: true });
+        await client.messageDelete(uid.toString(), { uid: true });
+        console.log(`Ensured source removal for UID ${uid} from ${openedFolder}`);
+      } catch (e) {
+        console.log(`Source removal skipped/failed for UID ${uid}: ${e.message}`);
+      }
+
       if (!moved) {
-        // If can't move, flag as deleted and expunge
-        console.log(`Could not move, flagging UID ${uid} as deleted`);
-        try {
-          await client.messageFlagsAdd(uid.toString(), ["\\Deleted"], { uid: true });
-          await client.messageDelete(uid.toString(), { uid: true });
-          console.log(`Flagged and deleted UID ${uid}`);
-        } catch (e) {
-          console.error(`Flag/delete failed: ${e.message}`);
-          throw e;
-        }
+        await client.logout();
+        return new Response(
+          JSON.stringify({ error: "Não foi possível mover o e-mail para a lixeira" }),
+          { status: 500, headers: corsHeaders }
+        );
       }
     } else {
       // Already in trash — permanently delete
