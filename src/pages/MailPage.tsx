@@ -51,26 +51,28 @@ export default function MailPage({ folder }: MailPageProps) {
   const bodyCache = useRef<Map<string, { body: string; to: string[]; cc?: string[] }>>(new Map());
 
   const convertedEmails: Email[] = useMemo(() => {
-    return remoteEmails.map((re) => {
-      const id = `${re.account_id}::${re.uid}`;
-      return {
-        id,
-        account_id: re.account_id,
-        account_name: re.account_name,
-        from: re.from,
-        from_email: re.from_email,
-        to: re.to,
-        cc: re.cc,
-        subject: re.subject,
-        preview: re.preview || re.subject,
-        body: re.body || undefined,
-        date: re.date,
-        is_read: re.is_read || readIds.has(id),
-        folder,
-        has_attachments: re.has_attachments,
-      };
-    });
-  }, [remoteEmails, folder, readIds]);
+    return remoteEmails
+      .filter((re) => !removedIds.has(`${re.account_id}::${re.uid}`))
+      .map((re) => {
+        const id = `${re.account_id}::${re.uid}`;
+        return {
+          id,
+          account_id: re.account_id,
+          account_name: re.account_name,
+          from: re.from,
+          from_email: re.from_email,
+          to: re.to,
+          cc: re.cc,
+          subject: re.subject,
+          preview: re.preview || re.subject,
+          body: re.body || undefined,
+          date: re.date,
+          is_read: re.is_read || readIds.has(id),
+          folder,
+          has_attachments: re.has_attachments,
+        };
+      });
+  }, [remoteEmails, folder, readIds, removedIds]);
 
   const filteredEmails = useMemo(() => {
     let result = convertedEmails;
