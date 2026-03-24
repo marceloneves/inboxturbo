@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 import type { Email } from '@/types/email';
 
 interface MailPageProps {
-  folder: 'inbox' | 'sent' | 'trash';
+  folder: 'inbox' | 'sent' | 'archive' | 'trash';
 }
 
 export default function MailPage({ folder }: MailPageProps) {

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 const navItems = [
   { label: 'Caixa de entrada', icon: Inbox, path: '/app/inbox' },
   { label: 'Enviados', icon: Send, path: '/app/sent' },
+  { label: 'Arquivo', icon: Archive, path: '/app/arquivo' },
   { label: 'Lixeira', icon: Trash2, path: '/app/trash' },
   { label: 'Contas conectadas', icon: Link2, path: '/app/contas' },
   { label: 'Perfil', icon: UserCircle, path: '/app/perfil' },

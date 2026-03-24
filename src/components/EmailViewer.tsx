@@ -29,6 +29,21 @@ export function EmailViewer({ email, onBack, onDelete, onArchive, isDeleting, is
         <Button variant="ghost" size="sm" onClick={() => setReplying(true)} disabled={replying}>
           <Reply className="h-4 w-4 mr-1" /> Responder
         </Button>
+        {onArchive && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onArchive(email.id)}
+            disabled={isArchiving}
+          >
+            {isArchiving ? (
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+            ) : (
+              <Archive className="h-4 w-4 mr-1" />
+            )}
+            Arquivar
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="sm"

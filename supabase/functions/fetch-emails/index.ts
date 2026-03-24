@@ -98,6 +98,7 @@ Deno.serve(async (req) => {
       // Try common alternatives
       const alternatives: Record<string, string[]> = {
         sent: ["Sent", "INBOX.Sent", "[Gmail]/Sent Mail", "Sent Items"],
+        archive: ["[Gmail]/All Mail", "Archive", "INBOX.Archive", "Archives", "INBOX.Archives"],
         trash: ["Trash", "INBOX.Trash", "[Gmail]/Trash", "Deleted Items"],
       };
       const alts = alternatives[folder] || [];
