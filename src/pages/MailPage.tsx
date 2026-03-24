@@ -1,15 +1,16 @@
 import { useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Inbox, Mail, Loader2 } from 'lucide-react';
+import { Inbox, Mail, Loader2, Filter } from 'lucide-react';
 import { useEmailAccounts } from '@/hooks/useEmailAccounts';
 import { useEmails } from '@/hooks/useEmails';
 import { useDeleteEmail } from '@/hooks/useDeleteEmail';
+import { supabase } from '@/integrations/supabase/client';
 import { EmailList } from '@/components/EmailList';
 import { EmailViewer } from '@/components/EmailViewer';
 import { ComposeInline } from '@/components/ComposeInline';
 import { EmptyState } from '@/components/EmptyState';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import type { Email } from '@/types/email';
 
@@ -29,7 +30,7 @@ export default function MailPage({ folder }: MailPageProps) {
 
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
-  const [filterAccount, setFilterAccount] = useState<string | null>(null);
+  const [filterAccount, setFilterAccount] = useState<string>('all');
   const [loadingBody, setLoadingBody] = useState(false);
 
   const convertedEmails: Email[] = useMemo(() => {
@@ -53,7 +54,7 @@ export default function MailPage({ folder }: MailPageProps) {
 
   const filteredEmails = useMemo(() => {
     let result = convertedEmails;
-    if (filterAccount) result = result.filter((e) => e.account_id === filterAccount);
+    if (filterAccount !== 'all') result = result.filter((e) => e.account_id === filterAccount);
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter((e) =>
@@ -65,13 +66,32 @@ export default function MailPage({ folder }: MailPageProps) {
     return result;
   }, [convertedEmails, filterAccount, searchQuery]);
 
+  const markAsRead = async (accountId: string, uid: number) => {
+    try {
+      await supabase.functions.invoke('mark-read', {
+        body: { account_id: accountId, uid, folder },
+      });
+    } catch {
+      // Silent — non-critical
+    }
+  };
+
   const handleSelectEmail = async (email: Email) => {
     setComposing(false);
+
+    const [accountId, uidStr] = email.id.split('::');
+    const uid = parseInt(uidStr);
+
+    // Mark as read in background
+    if (!email.is_read) {
+      markAsRead(accountId, uid);
+      // Optimistically update local state
+      email = { ...email, is_read: true };
+    }
+
     if (!email.body || email.body.length === 0) {
       setSelectedEmail({ ...email, body: '<p>Carregando...</p>' });
       setLoadingBody(true);
-      const [accountId, uidStr] = email.id.split('::');
-      const uid = parseInt(uidStr);
       const fullEmail = await fetchEmailBody(accountId, uid);
       if (fullEmail) {
         setSelectedEmail({
@@ -104,11 +124,6 @@ export default function MailPage({ folder }: MailPageProps) {
 
     setSelectedEmail(null);
     setDeleteTarget(null);
-  };
-
-  const handleCompose = () => {
-    setSelectedEmail(null);
-    setComposing(true);
   };
 
   const folderLabels = { inbox: 'Caixa de entrada', sent: 'Enviados', trash: 'Lixeira' };
@@ -148,28 +163,22 @@ export default function MailPage({ folder }: MailPageProps) {
           </span>
           {isLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
           <div className="flex-1" />
-        </div>
-
-        <div className="flex gap-1.5 overflow-x-auto border-b px-4 py-2 scrollbar-thin">
-          <Button
-            variant={filterAccount === null ? 'secondary' : 'ghost'}
-            size="sm"
-            className="text-xs h-7 shrink-0"
-            onClick={() => setFilterAccount(null)}
-          >
-            Todas
-          </Button>
-          {accounts.map((acc) => (
-            <Button
-              key={acc.id}
-              variant={filterAccount === acc.id ? 'secondary' : 'ghost'}
-              size="sm"
-              className="text-xs h-7 shrink-0"
-              onClick={() => setFilterAccount(acc.id)}
-            >
-              {acc.friendly_name}
-            </Button>
-          ))}
+          <div className="flex items-center gap-1.5">
+            <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+            <Select value={filterAccount} onValueChange={setFilterAccount}>
+              <SelectTrigger className="h-7 w-[160px] text-xs border-0 bg-muted/50">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as contas</SelectItem>
+                {accounts.map((acc) => (
+                  <SelectItem key={acc.id} value={acc.id}>
+                    {acc.friendly_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {filteredEmails.length === 0 ? (
