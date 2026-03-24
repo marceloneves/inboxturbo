@@ -84,7 +84,7 @@ export function EmailListItem({ email, isActive, isPinned, labels, onClick }: Em
               {labels.map((label) => (
                 <span
                   key={label.id}
-                  className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold text-white leading-none"
+                  className="inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold text-white leading-none"
                   style={{ backgroundColor: label.color }}
                 >
                   {label.name}

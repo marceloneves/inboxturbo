@@ -207,6 +207,9 @@ export const es = {
     },
     language: 'Idioma',
     languageDesc: 'Elige el idioma de la interfaz',
+    interfaceStyle: 'Estilo de interfaz',
+    interfaceStyleDesc: 'Elige un estilo visual para la interfaz',
+    styleSaved: '¡Estilo de interfaz actualizado!',
   },
   plans: {
     title: 'Elige tu plan',
