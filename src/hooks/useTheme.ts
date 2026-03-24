@@ -1,5 +1,6 @@
 import { useEffect, useCallback } from 'react';
 import { useUserPreferences } from './useUserPreferences';
+import { applyUiStyle, getSavedUiStyle } from '@/lib/themes';
 
 type Theme = 'light' | 'dark';
 
@@ -11,6 +12,8 @@ function applyTheme(theme: Theme) {
     root.classList.remove('dark');
   }
   localStorage.setItem('theme', theme);
+  // Re-apply UI style colors for the new theme mode
+  applyUiStyle(getSavedUiStyle(), theme === 'dark');
 }
 
 export function useTheme() {
