@@ -10,7 +10,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { AccountSelector } from '@/components/AccountSelector';
 import { useEmailAccounts } from '@/hooks/useEmailAccounts';
 import { useSendEmail } from '@/hooks/useSendEmail';
-import { mockAccounts } from '@/data/mockData';
 import { toast } from 'sonner';
 
 const composeSchema = z.object({
@@ -30,9 +29,12 @@ export function ComposeEmailModal({ open, onClose }: ComposeEmailModalProps) {
   const { accounts } = useEmailAccounts();
   const sendEmail = useSendEmail();
 
-  const displayAccounts = accounts.length > 0
-    ? accounts.map(a => ({ id: a.id, friendly_name: a.friendly_name, email_address: a.email_address, is_default_sender: a.is_default_sender }))
-    : mockAccounts.map(a => ({ id: a.id, friendly_name: a.friendly_name, email_address: a.email_address, is_default_sender: a.is_default_sender }));
+  const displayAccounts = accounts.map(a => ({
+    id: a.id,
+    friendly_name: a.friendly_name,
+    email_address: a.email_address,
+    is_default_sender: a.is_default_sender,
+  }));
 
   const defaultAccount = displayAccounts.find((a) => a.is_default_sender) || displayAccounts[0];
   const [selectedAccount, setSelectedAccount] = useState(defaultAccount?.id || '');
@@ -44,29 +46,24 @@ export function ComposeEmailModal({ open, onClose }: ComposeEmailModalProps) {
   if (!open) return null;
 
   const onSubmit = async (data: Record<string, string>) => {
-    const hasRealAccounts = accounts.length > 0;
+    if (accounts.length === 0) {
+      toast.error('Nenhuma conta de e-mail conectada.');
+      return;
+    }
 
-    if (hasRealAccounts) {
-      try {
-        await sendEmail.mutateAsync({
-          account_id: selectedAccount,
-          to: data.to,
-          cc: data.cc,
-          bcc: data.bcc,
-          subject: data.subject,
-          body: `<p>${data.body.replace(/\n/g, '</p><p>')}</p>`,
-        });
-        reset();
-        onClose();
-      } catch {
-        // Error handled by mutation
-      }
-    } else {
-      // Mock sending
-      await new Promise((r) => setTimeout(r, 1500));
-      toast.success('E-mail enviado com sucesso! (simulação)');
+    try {
+      await sendEmail.mutateAsync({
+        account_id: selectedAccount,
+        to: data.to,
+        cc: data.cc,
+        bcc: data.bcc,
+        subject: data.subject,
+        body: `<p>${data.body.replace(/\n/g, '</p><p>')}</p>`,
+      });
       reset();
       onClose();
+    } catch {
+      // Error handled by mutation
     }
   };
 

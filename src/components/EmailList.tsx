@@ -1,4 +1,4 @@
-import type { Email } from '@/data/mockData';
+import type { Email } from '@/types/email';
 import { EmailListItem } from '@/components/EmailListItem';
 
 interface EmailListProps {

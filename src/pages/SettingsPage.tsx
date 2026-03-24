@@ -3,11 +3,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '@/hooks/useAuth';
+import { useEmailAccounts } from '@/hooks/useEmailAccounts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { mockAccounts } from '@/data/mockData';
 import { toast } from 'sonner';
 import { Loader2, Lock } from 'lucide-react';
 
@@ -21,9 +21,10 @@ const passwordSchema = z.object({
 
 export default function SettingsPage() {
   const { updatePassword } = useAuth();
+  const { accounts } = useEmailAccounts();
   const [changingPw, setChangingPw] = useState(false);
   const [defaultAccount, setDefaultAccount] = useState(
-    mockAccounts.find((a) => a.is_default_sender)?.id || ''
+    accounts.find((a) => a.is_default_sender)?.id || ''
   );
 
   const { register, handleSubmit, formState: { errors }, reset } = useForm({
@@ -49,7 +50,6 @@ export default function SettingsPage() {
         <p className="text-sm text-muted-foreground mt-1">Personalize sua experiência</p>
       </div>
 
-      {/* Change password */}
       <div className="rounded-xl border bg-card p-6">
         <div className="flex items-center gap-2 mb-4">
           <Lock className="h-4 w-4 text-muted-foreground" />
@@ -78,20 +78,21 @@ export default function SettingsPage() {
         </form>
       </div>
 
-      {/* Default account */}
-      <div className="rounded-xl border bg-card p-6">
-        <h2 className="font-semibold mb-4">Conta padrão de envio</h2>
-        <Select value={defaultAccount} onValueChange={(v) => { setDefaultAccount(v); toast.success('Conta padrão atualizada.'); }}>
-          <SelectTrigger><SelectValue placeholder="Selecionar conta" /></SelectTrigger>
-          <SelectContent>
-            {mockAccounts.map((acc) => (
-              <SelectItem key={acc.id} value={acc.id}>
-                {acc.friendly_name} ({acc.email_address})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {accounts.length > 0 && (
+        <div className="rounded-xl border bg-card p-6">
+          <h2 className="font-semibold mb-4">Conta padrão de envio</h2>
+          <Select value={defaultAccount} onValueChange={(v) => { setDefaultAccount(v); toast.success('Conta padrão atualizada.'); }}>
+            <SelectTrigger><SelectValue placeholder="Selecionar conta" /></SelectTrigger>
+            <SelectContent>
+              {accounts.map((acc) => (
+                <SelectItem key={acc.id} value={acc.id}>
+                  {acc.friendly_name} ({acc.email_address})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
     </div>
   );
 }

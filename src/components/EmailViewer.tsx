@@ -3,7 +3,7 @@ import { ptBR } from 'date-fns/locale';
 import { ArrowLeft, Trash2, Reply, Paperclip } from 'lucide-react';
 import { AccountBadge } from '@/components/AccountBadge';
 import { Button } from '@/components/ui/button';
-import type { Email } from '@/data/mockData';
+import type { Email } from '@/types/email';
 
 interface EmailViewerProps {
   email: Email;
