@@ -45,7 +45,7 @@ interface AuthFormProps {
 const schemas = { login: loginSchema, signup: signupSchema, forgot: forgotSchema, reset: resetSchema };
 
 const titles: Record<FormMode, string> = {
-  login: 'Entrar no InboxTurbo',
+  login: 'Entrar no inboxTurbo',
   signup: 'Criar sua conta',
   forgot: 'Recuperar senha',
   reset: 'Redefinir senha',
