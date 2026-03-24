@@ -70,9 +70,8 @@ export default function MailPage({ folder }: MailPageProps) {
     if (!email.body || email.body.length === 0) {
       setSelectedEmail({ ...email, body: '<p>Carregando...</p>' });
       setLoadingBody(true);
-      const parts = email.id.split('-');
-      const accountId = parts[0];
-      const uid = parseInt(parts.slice(1).join('-'));
+      const [accountId, uidStr] = email.id.split('::');
+      const uid = parseInt(uidStr);
       const fullEmail = await fetchEmailBody(accountId, uid);
       if (fullEmail) {
         setSelectedEmail({
