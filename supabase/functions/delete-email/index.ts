@@ -7,6 +7,11 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+type MailboxInfo = {
+  path: string;
+  specialUse?: string | null;
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -79,105 +84,47 @@ Deno.serve(async (req) => {
 
     await client.connect();
 
-    // Map folder names
-    const folderMap: Record<string, string> = {
-      inbox: "INBOX",
-      sent: "[Gmail]/Enviados",
-      archive: "Archive",
-      trash: "[Gmail]/Lixeira",
-      INBOX: "INBOX",
-    };
-
-    const imapFolder = folderMap[folder] || folder;
-    let mailbox;
-    let openedFolder = imapFolder;
-    try {
-      mailbox = await client.mailboxOpen(imapFolder);
-    } catch (e) {
-      console.log(`Could not open ${imapFolder}: ${e.message}`);
-      const alternatives: Record<string, string[]> = {
-        inbox: ["INBOX"],
-        sent: ["Sent", "INBOX.Sent", "[Gmail]/Sent Mail", "Sent Items"],
-        archive: ["INBOX.Archive", "Archives", "INBOX.Archives"],
-        trash: ["Trash", "INBOX.Trash", "[Gmail]/Trash", "Deleted Items"],
-      };
-      const alts = alternatives[folder] || [];
-      for (const alt of alts) {
-        try {
-          mailbox = await client.mailboxOpen(alt);
-          openedFolder = alt;
-          console.log(`Opened alternative folder: ${alt}`);
-          break;
-        } catch {
-          continue;
-        }
-      }
-      if (!mailbox) {
-        await client.logout();
-        return new Response(
-          JSON.stringify({ error: "Pasta não encontrada" }),
-          { status: 404, headers: corsHeaders }
-        );
-      }
+    // Resolve source folder dynamically
+    const sourceMailbox = await resolveMailboxPath(client, folder);
+    if (!sourceMailbox) {
+      await client.logout();
+      return new Response(
+        JSON.stringify({ error: "Pasta de origem não encontrada" }),
+        { status: 404, headers: corsHeaders }
+      );
     }
 
-    console.log(`Folder opened: ${openedFolder}, exists: ${mailbox.exists}, deleting UID: ${uid}`);
+    const isAlreadyInTrash = folder === "trash";
 
-    // Try to move to trash first, if not already in trash
-    if (folder !== "trash") {
-      const trashFolders = [
-        "[Gmail]/Lixeira",
-        "[Gmail]/Trash",
-        "Trash",
-        "INBOX.Trash",
-        "Deleted Items",
-        "Deleted Messages",
-      ];
-
-      let moved = false;
-      for (const trashFolder of trashFolders) {
-        try {
-          const result = await client.messageMove(uid.toString(), trashFolder, { uid: true });
-          console.log(`Moved UID ${uid} to ${trashFolder}, result: ${JSON.stringify(result)}`);
-
-          // Some servers return false even when the command is accepted.
-          // In these cases we still force removal from the source folder below.
-          moved = true;
-          break;
-        } catch (e) {
-          console.log(`Move to ${trashFolder} failed: ${e.message}`);
-          continue;
-        }
-      }
-
-      // Ensure the message is actually removed from the source folder.
-      // This fixes providers where MOVE behaves like COPY or returns ambiguous results.
-      try {
-        await client.mailboxOpen(openedFolder);
-        await client.messageFlagsAdd(uid.toString(), ["\\Deleted"], { uid: true });
-        await client.messageDelete(uid.toString(), { uid: true });
-        console.log(`Ensured source removal for UID ${uid} from ${openedFolder}`);
-      } catch (e) {
-        console.log(`Source removal skipped/failed for UID ${uid}: ${e.message}`);
-      }
-
-      if (!moved) {
+    if (isAlreadyInTrash) {
+      // Permanently delete from trash
+      await client.mailboxOpen(sourceMailbox);
+      await client.messageFlagsAdd(uid.toString(), ["\\Deleted"], { uid: true });
+      await client.messageDelete(uid.toString(), { uid: true });
+      console.log(`Permanently deleted UID ${uid} from ${sourceMailbox}`);
+    } else {
+      // Move to trash using Copy + Delete (reliable strategy)
+      const trashMailbox = await resolveMailboxPath(client, "trash");
+      if (!trashMailbox) {
         await client.logout();
         return new Response(
-          JSON.stringify({ error: "Não foi possível mover o e-mail para a lixeira" }),
+          JSON.stringify({ error: "Pasta de lixeira não encontrada no servidor" }),
           { status: 500, headers: corsHeaders }
         );
       }
-    } else {
-      // Already in trash — permanently delete
-      try {
-        await client.messageFlagsAdd(uid.toString(), ["\\Deleted"], { uid: true });
-        await client.messageDelete(uid.toString(), { uid: true });
-        console.log(`Permanently deleted UID ${uid} from trash`);
-      } catch (e) {
-        console.error(`Permanent delete failed: ${e.message}`);
-        throw e;
-      }
+
+      console.log(`Moving UID ${uid} from ${sourceMailbox} to trash (${trashMailbox})`);
+
+      // Copy to trash
+      await client.mailboxOpen(sourceMailbox);
+      await client.messageCopy(uid.toString(), trashMailbox, { uid: true });
+
+      // Delete from source
+      await client.mailboxOpen(sourceMailbox);
+      await client.messageFlagsAdd(uid.toString(), ["\\Deleted"], { uid: true });
+      await client.messageDelete(uid.toString(), { uid: true });
+
+      console.log(`Successfully moved UID ${uid} to ${trashMailbox}`);
     }
 
     await client.logout();
@@ -197,3 +144,46 @@ Deno.serve(async (req) => {
     );
   }
 });
+
+async function resolveMailboxPath(client: ImapFlow, folder: string): Promise<string | null> {
+  const mailboxes = (await client.list()) as MailboxInfo[];
+  const normalizedFolder = folder.toLowerCase();
+
+  // Try special-use flags first (most reliable)
+  const specialUseMap: Record<string, string> = {
+    inbox: "\\Inbox",
+    sent: "\\Sent",
+    archive: "\\Archive",
+    trash: "\\Trash",
+  };
+
+  const specialUse = specialUseMap[normalizedFolder];
+  if (specialUse) {
+    const bySpecialUse = mailboxes.find((m) => m.specialUse === specialUse);
+    if (bySpecialUse) return bySpecialUse.path;
+  }
+
+  // Fallback to name matching
+  const candidates: Record<string, string[]> = {
+    inbox: ["inbox"],
+    sent: ["sent", "sent items", "enviados"],
+    archive: ["archive", "archives", "arquivo", "arquivados"],
+    trash: ["trash", "deleted items", "deleted messages", "lixeira", "papelera"],
+  };
+
+  const excluded: Record<string, string[]> = {
+    archive: ["all mail", "todos os e-mails"],
+  };
+
+  const folderCandidates = candidates[normalizedFolder] || [normalizedFolder];
+
+  const byName = mailboxes.find((mailbox) => {
+    const path = mailbox.path.toLowerCase();
+    if (excluded[normalizedFolder]?.some((term) => path.includes(term))) return false;
+    return folderCandidates.some(
+      (c) => path === c || path.endsWith(`/${c}`) || path.endsWith(`.${c}`) || path.includes(c)
+    );
+  });
+
+  return byName?.path ?? null;
+}
