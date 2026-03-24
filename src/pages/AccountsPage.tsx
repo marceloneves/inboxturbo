@@ -274,22 +274,98 @@ export default function AccountsPage() {
 
       {/* Edit dialog */}
       <Dialog open={!!editTarget} onOpenChange={() => setEditTarget(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar conta</DialogTitle>
           </DialogHeader>
           {editTarget && (
             <div className="space-y-4">
-              <div className="space-y-1.5">
-                <Label>Nome amigável</Label>
-                <Input value={editTarget.friendly_name} onChange={(e) => setEditTarget({ ...editTarget, friendly_name: e.target.value })} />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Nome amigável</Label>
+                  <Input value={editTarget.friendly_name} onChange={(e) => setEditTarget({ ...editTarget, friendly_name: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Provedor</Label>
+                  <Select value={editTarget.provider} onValueChange={(v) => {
+                    const defaults = providerDefaults[v];
+                    setEditTarget({
+                      ...editTarget,
+                      provider: v,
+                      ...(defaults ? { imap_host: defaults.imap_host, imap_port: defaults.imap_port, smtp_host: defaults.smtp_host, smtp_port: defaults.smtp_port } : {}),
+                    });
+                  }}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="gmail">Gmail</SelectItem>
+                      <SelectItem value="outlook">Outlook</SelectItem>
+                      <SelectItem value="yahoo">Yahoo</SelectItem>
+                      <SelectItem value="imap">Outro (IMAP/SMTP)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
+
+              <div className="space-y-1.5">
+                <Label>Endereço de e-mail</Label>
+                <Input type="email" value={editTarget.email_address} onChange={(e) => setEditTarget({ ...editTarget, email_address: e.target.value })} />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Servidor IMAP</Label>
+                  <Input value={editTarget.imap_host || ''} onChange={(e) => setEditTarget({ ...editTarget, imap_host: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Porta IMAP</Label>
+                  <Input type="number" value={editTarget.imap_port || 993} onChange={(e) => setEditTarget({ ...editTarget, imap_port: Number(e.target.value) })} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Servidor SMTP</Label>
+                  <Input value={editTarget.smtp_host || ''} onChange={(e) => setEditTarget({ ...editTarget, smtp_host: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Porta SMTP</Label>
+                  <Input type="number" value={editTarget.smtp_port || 587} onChange={(e) => setEditTarget({ ...editTarget, smtp_port: Number(e.target.value) })} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Usuário (login)</Label>
+                  <Input value={editTarget.username || ''} onChange={(e) => setEditTarget({ ...editTarget, username: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Senha / App Password</Label>
+                  <Input type="password" placeholder="Deixe vazio para manter a atual" onChange={(e) => setEditTarget({ ...editTarget, password: e.target.value })} />
+                </div>
+              </div>
+
+              {editTarget.provider === 'gmail' && (
+                <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-3">
+                  💡 Para Gmail, use uma <strong>Senha de App</strong> (App Password).
+                </p>
+              )}
+
               <div className="flex justify-end gap-2 pt-2">
                 <Button variant="outline" onClick={() => setEditTarget(null)}>Cancelar</Button>
-                <Button onClick={() => {
-                  updateAccount.mutate({ id: editTarget.id, friendly_name: editTarget.friendly_name } as { id: string; friendly_name: string });
-                  setEditTarget(null);
-                }}>Salvar</Button>
+                <Button
+                  disabled={updateAccount.isPending}
+                  onClick={() => {
+                    const { id, user_id, created_at, updated_at, ...fields } = editTarget;
+                    // Remove password if empty (keep current)
+                    const updates = { ...fields };
+                    if (!updates.password) delete updates.password;
+                    updateAccount.mutate({ id, ...updates });
+                    setEditTarget(null);
+                  }}
+                >
+                  {updateAccount.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Salvar
+                </Button>
               </div>
             </div>
           )}
