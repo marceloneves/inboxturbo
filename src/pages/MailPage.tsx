@@ -76,9 +76,14 @@ export default function MailPage({ folder }: MailPageProps) {
       if (fullEmail) {
         setSelectedEmail({
           ...email,
-          body: fullEmail.body || '',
+          body: fullEmail.body || '<p>Este e-mail não possui conteúdo exibível.</p>',
           to: fullEmail.to,
           cc: fullEmail.cc,
+        });
+      } else {
+        setSelectedEmail({
+          ...email,
+          body: '<p>Não foi possível carregar o conteúdo deste e-mail.</p>',
         });
       }
       setLoadingBody(false);
