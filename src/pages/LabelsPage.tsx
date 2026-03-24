@@ -16,6 +16,7 @@ import {
 const PRESET_COLORS = [
   '#3b82f6', '#ef4444', '#22c55e', '#f59e0b',
   '#8b5cf6', '#ec4899', '#06b6d4', '#f97316',
+  '#14b8a6', '#a855f7', '#e11d48', '#84cc16',
 ];
 
 export default function LabelsPage() {
@@ -101,7 +102,7 @@ export default function LabelsPage() {
             </div>
             <div className="space-y-1.5">
               <Label>{t.labels.labelColor}</Label>
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-2 flex-wrap items-center">
                 {PRESET_COLORS.map((color) => (
                   <button
                     key={color}
@@ -113,6 +114,26 @@ export default function LabelsPage() {
                     }}
                   />
                 ))}
+                {/* Custom color picker */}
+                <label
+                  className="relative h-8 w-8 rounded-full border-2 transition-transform hover:scale-110 cursor-pointer overflow-hidden flex items-center justify-center bg-gradient-to-br from-red-500 via-green-500 to-blue-500"
+                  style={{
+                    borderColor: !PRESET_COLORS.includes(newColor) ? 'hsl(var(--foreground))' : 'transparent',
+                  }}
+                  title="Custom color"
+                >
+                  <input
+                    type="color"
+                    value={newColor}
+                    onChange={(e) => setNewColor(e.target.value)}
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                  />
+                </label>
+              </div>
+              {/* Preview of selected color */}
+              <div className="flex items-center gap-2 mt-2">
+                <div className="h-5 w-5 rounded-full" style={{ backgroundColor: newColor }} />
+                <span className="text-xs text-muted-foreground font-mono">{newColor}</span>
               </div>
             </div>
             <div className="flex justify-end gap-2">

@@ -121,8 +121,8 @@ export default function AccountsPage() {
         </Button>
       </div>
 
-      {/* Search bar for accounts */}
-      {accounts.length > 3 && (
+      {/* Search bar for accounts - always visible */}
+      {accounts.length > 0 && (
         <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input

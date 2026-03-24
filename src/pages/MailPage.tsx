@@ -187,10 +187,10 @@ export default function MailPage({ folder }: MailPageProps) {
   const isLoading = accountsLoading || emailsLoading;
   const showViewer = selectedEmail || composing;
 
-  // Helper to get label colors for an email
-  const getLabelColors = (email: Email) => {
+  // Helper to get labels for an email
+  const getEmailLabels = (email: Email) => {
     const [accId, uidStr] = email.id.split('::');
-    return getLabelsForEmail(accId, parseInt(uidStr)).map(l => l.color);
+    return getLabelsForEmail(accId, parseInt(uidStr));
   };
 
   const getIsPinned = (email: Email) => {
@@ -266,7 +266,7 @@ export default function MailPage({ folder }: MailPageProps) {
               activeEmailId={selectedEmail?.id || null}
               onSelectEmail={handleSelectEmail}
               isPinnedFn={getIsPinned}
-              getLabelColorsFn={getLabelColors}
+              getLabelsFn={getEmailLabels}
             />
           ))}
         </div>
@@ -320,7 +320,7 @@ export default function MailPage({ folder }: MailPageProps) {
                   activeEmailId={selectedEmail?.id || null}
                   onSelectEmail={handleSelectEmail}
                   isPinnedFn={getIsPinned}
-                  getLabelColorsFn={getLabelColors}
+                  getLabelsFn={getEmailLabels}
                 />
               )}
             </div>
@@ -328,7 +328,7 @@ export default function MailPage({ folder }: MailPageProps) {
         </>
       ) : (
         <ResizablePanelGroup direction="horizontal" autoSaveId="mail-panel-sizes">
-          <ResizablePanel defaultSize={30} minSize={20} maxSize={50}>
+          <ResizablePanel defaultSize={38} minSize={25} maxSize={55}>
             <div className="flex h-full flex-col">
               <ListHeader />
               {filteredEmails.length === 0 ? (
@@ -339,13 +339,13 @@ export default function MailPage({ folder }: MailPageProps) {
                   activeEmailId={selectedEmail?.id || null}
                   onSelectEmail={handleSelectEmail}
                   isPinnedFn={getIsPinned}
-                  getLabelColorsFn={getLabelColors}
+                  getLabelsFn={getEmailLabels}
                 />
               )}
             </div>
           </ResizablePanel>
           <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={70}>
+          <ResizablePanel defaultSize={62}>
             {composing ? (
               <ComposeInline onClose={() => setComposing(false)} />
             ) : selectedEmail ? (
