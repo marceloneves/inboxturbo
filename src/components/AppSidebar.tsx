@@ -15,6 +15,7 @@ const navItems = [
   { label: 'Contas conectadas', icon: Link2, path: '/app/contas' },
   { label: 'Perfil', icon: UserCircle, path: '/app/perfil' },
   { label: 'Configurações', icon: Settings, path: '/app/configuracoes' },
+  { label: 'Planos', icon: Crown, path: '/app/planos' },
 ];
 
 export function AppSidebar() {
