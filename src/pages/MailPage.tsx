@@ -44,6 +44,8 @@ export default function MailPage({ folder }: MailPageProps) {
 
   // Track locally-read email IDs so the list updates instantly
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
+  // Track locally-removed email IDs for instant visual removal
+  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
 
   // Cache loaded email bodies to avoid re-fetching
   const bodyCache = useRef<Map<string, { body: string; to: string[]; cc?: string[] }>>(new Map());
