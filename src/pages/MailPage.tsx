@@ -266,7 +266,7 @@ export default function MailPage({ folder }: MailPageProps) {
               activeEmailId={selectedEmail?.id || null}
               onSelectEmail={handleSelectEmail}
               isPinnedFn={getIsPinned}
-              getLabelColorsFn={getLabelColors}
+              getLabelsFn={getEmailLabels}
             />
           ))}
         </div>
@@ -320,7 +320,7 @@ export default function MailPage({ folder }: MailPageProps) {
                   activeEmailId={selectedEmail?.id || null}
                   onSelectEmail={handleSelectEmail}
                   isPinnedFn={getIsPinned}
-                  getLabelColorsFn={getLabelColors}
+                  getLabelsFn={getEmailLabels}
                 />
               )}
             </div>
@@ -339,7 +339,7 @@ export default function MailPage({ folder }: MailPageProps) {
                   activeEmailId={selectedEmail?.id || null}
                   onSelectEmail={handleSelectEmail}
                   isPinnedFn={getIsPinned}
-                  getLabelColorsFn={getLabelColors}
+                  getLabelsFn={getEmailLabels}
                 />
               )}
             </div>
