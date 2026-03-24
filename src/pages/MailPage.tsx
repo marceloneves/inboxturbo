@@ -243,7 +243,9 @@ export default function MailPage({ folder }: MailPageProps) {
             email={selectedEmail}
             onBack={() => setSelectedEmail(null)}
             onDelete={(id) => setDeleteTarget(id)}
+            onArchive={folder !== 'archive' ? handleArchive : undefined}
             isDeleting={deleteEmail.isPending}
+            isArchiving={archiveEmail.isPending}
           />
         ) : (
           <div className="hidden lg:flex h-full items-center justify-center">
