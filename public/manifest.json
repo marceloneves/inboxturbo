@@ -1,7 +1,7 @@
 {
-  "name": "inboxTurbo",
-  "short_name": "inboxTurbo",
-  "description": "Agregador de contas de e-mail em uma interface unificada",
+  "name": "Inbox Turbo",
+  "short_name": "Inbox Turbo",
+  "description": "Unified email aggregator for all your accounts",
   "start_url": "/login",
   "display": "standalone",
   "background_color": "#f5f7fa",

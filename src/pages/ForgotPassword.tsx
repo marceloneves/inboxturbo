@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useI18n } from '@/i18n';
 import { AuthForm } from '@/components/AuthForm';
 
 export default function ForgotPassword() {
   const { resetPassword } = useAuth();
+  const { t } = useI18n();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -13,7 +15,7 @@ export default function ForgotPassword() {
     if (error) {
       setError(error.message);
     } else {
-      setSuccess('Instruções enviadas! Verifique seu e-mail.');
+      setSuccess(t.auth.instructionsSent);
     }
   };
 

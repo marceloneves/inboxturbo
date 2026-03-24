@@ -1,32 +1,30 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useI18n } from '@/i18n';
 import { AuthForm } from '@/components/AuthForm';
 
 type SignupError = Error & { code?: string };
 
 export default function Signup() {
   const { signUp } = useAuth();
+  const { t } = useI18n();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   const handleSubmit = async (data: Record<string, string>) => {
     setError(null);
     setSuccess(null);
-
     const { error } = await signUp(data.email, data.password, data.name);
-
     if (error) {
       const message = error.message.toLowerCase();
       const code = (error as SignupError).code?.toLowerCase() ?? '';
-
       if (message.includes('security purposes') || message.includes('rate limit') || code.includes('rate')) {
-        setError('Aguarde alguns segundos antes de solicitar outro e-mail de confirmação.');
+        setError(t.auth.rateLimitSignup);
         return;
       }
-
-      setError('Não foi possível criar sua conta agora. Tente novamente em instantes.');
+      setError(t.auth.genericSignupError);
     } else {
-      setSuccess('Conta criada! Abra o link enviado para seu e-mail antes de entrar. Se não encontrar, verifique o spam.');
+      setSuccess(t.auth.accountCreated);
     }
   };
 
