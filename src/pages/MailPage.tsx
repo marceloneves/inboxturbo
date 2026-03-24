@@ -43,7 +43,7 @@ export default function MailPage({ folder }: MailPageProps) {
       cc: re.cc,
       subject: re.subject,
       preview: re.preview || re.subject,
-      body: re.body || '',
+      body: re.body || undefined,
       date: re.date,
       is_read: re.is_read,
       folder,
