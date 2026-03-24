@@ -11,10 +11,12 @@ interface EmailViewerProps {
   email: Email;
   onBack: () => void;
   onDelete: (id: string) => void;
+  onArchive?: (id: string) => void;
   isDeleting?: boolean;
+  isArchiving?: boolean;
 }
 
-export function EmailViewer({ email, onBack, onDelete, isDeleting }: EmailViewerProps) {
+export function EmailViewer({ email, onBack, onDelete, onArchive, isDeleting, isArchiving }: EmailViewerProps) {
   const [replying, setReplying] = useState(false);
 
   return (
