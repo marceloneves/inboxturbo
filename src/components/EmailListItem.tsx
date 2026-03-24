@@ -19,11 +19,19 @@ function formatEmailDate(dateStr: string) {
 }
 
 export function EmailListItem({ email, isActive, onClick }: EmailListItemProps) {
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData('application/x-email-id', email.id);
+    e.dataTransfer.setData('application/x-email-folder', email.folder);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
   return (
     <button
+      draggable
+      onDragStart={handleDragStart}
       onClick={onClick}
       className={cn(
-        'flex w-full items-start gap-3 border-b px-4 py-3 text-left transition-colors',
+        'flex w-full items-start gap-3 border-b px-4 py-3 text-left transition-colors cursor-grab active:cursor-grabbing',
         isActive ? 'bg-primary/5 border-l-2 border-l-primary' : 'hover:bg-muted/50',
         !email.is_read && 'bg-card'
       )}
