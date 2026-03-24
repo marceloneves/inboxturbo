@@ -10,14 +10,8 @@ import { RichTextEditor } from '@/components/RichTextEditor';
 import { AccountSelector } from '@/components/AccountSelector';
 import { useEmailAccounts } from '@/hooks/useEmailAccounts';
 import { useSendEmail } from '@/hooks/useSendEmail';
+import { useI18n } from '@/i18n';
 import { toast } from 'sonner';
-
-const composeSchema = z.object({
-  to: z.string().email('E-mail inválido').max(255),
-  cc: z.string().optional(),
-  bcc: z.string().optional(),
-  subject: z.string().min(1, 'Assunto obrigatório').max(500),
-});
 
 interface ComposeInlineProps {
   onClose: () => void;
@@ -26,7 +20,15 @@ interface ComposeInlineProps {
 export function ComposeInline({ onClose }: ComposeInlineProps) {
   const { accounts } = useEmailAccounts();
   const sendEmail = useSendEmail();
+  const { t } = useI18n();
   const [body, setBody] = useState('');
+
+  const composeSchema = z.object({
+    to: z.string().email(t.compose.invalidEmail).max(255),
+    cc: z.string().optional(),
+    bcc: z.string().optional(),
+    subject: z.string().min(1, t.compose.subjectRequired).max(500),
+  });
 
   const displayAccounts = accounts.map(a => ({
     id: a.id,
@@ -51,15 +53,13 @@ export function ComposeInline({ onClose }: ComposeInlineProps) {
 
   const onSubmit = async (data: Record<string, string>) => {
     if (accounts.length === 0) {
-      toast.error('Nenhuma conta de e-mail conectada.');
+      toast.error(t.compose.noAccountConnected);
       return;
     }
-
     if (!body.trim() || body === '<p></p>') {
-      toast.error('Mensagem obrigatória.');
+      toast.error(t.compose.messageRequired);
       return;
     }
-
     try {
       await sendEmail.mutateAsync({
         account_id: selectedAccount,
@@ -80,7 +80,7 @@ export function ComposeInline({ onClose }: ComposeInlineProps) {
   return (
     <div className="flex h-full flex-col animate-fade-in">
       <div className="flex items-center justify-between border-b px-4 py-3">
-        <h3 className="font-semibold">Novo e-mail</h3>
+        <h3 className="font-semibold">{t.compose.title}</h3>
         <Button variant="ghost" size="sm" onClick={onClose}>
           <X className="h-4 w-4" />
         </Button>
@@ -89,7 +89,7 @@ export function ComposeInline({ onClose }: ComposeInlineProps) {
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-1 flex-col overflow-y-auto">
         <div className="space-y-3 p-4">
           <div className="space-y-1.5">
-            <Label>Conta de envio</Label>
+            <Label>{t.compose.sendingAccount}</Label>
             <AccountSelector
               accounts={displayAccounts}
               value={selectedAccount}
@@ -98,43 +98,43 @@ export function ComposeInline({ onClose }: ComposeInlineProps) {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="compose-to">Para</Label>
-            <Input id="compose-to" placeholder="destinatario@email.com" {...register('to')} />
+            <Label htmlFor="compose-to">{t.compose.to}</Label>
+            <Input id="compose-to" placeholder="recipient@email.com" {...register('to')} />
             {errors.to && <p className="text-xs text-destructive">{errors.to.message as string}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="compose-cc">Cc</Label>
-              <Input id="compose-cc" placeholder="Opcional" {...register('cc')} />
+              <Label htmlFor="compose-cc">{t.compose.cc}</Label>
+              <Input id="compose-cc" placeholder={t.common.optional} {...register('cc')} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="compose-bcc">Cco</Label>
-              <Input id="compose-bcc" placeholder="Opcional" {...register('bcc')} />
+              <Label htmlFor="compose-bcc">{t.compose.bcc}</Label>
+              <Input id="compose-bcc" placeholder={t.common.optional} {...register('bcc')} />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="compose-subject">Assunto</Label>
-            <Input id="compose-subject" placeholder="Assunto do e-mail" {...register('subject')} />
+            <Label htmlFor="compose-subject">{t.compose.subject}</Label>
+            <Input id="compose-subject" placeholder={t.compose.subjectPlaceholder} {...register('subject')} />
             {errors.subject && <p className="text-xs text-destructive">{errors.subject.message as string}</p>}
           </div>
 
           <div className="space-y-1.5">
-            <Label>Mensagem</Label>
+            <Label>{t.compose.message}</Label>
             <RichTextEditor
               onChange={setBody}
-              placeholder="Escreva sua mensagem..."
+              placeholder={t.compose.messagePlaceholder}
               minHeight="200px"
             />
           </div>
         </div>
 
         <div className="flex items-center justify-end gap-2 border-t px-4 py-3 mt-auto">
-          <Button variant="outline" type="button" onClick={onClose}>Cancelar</Button>
+          <Button variant="outline" type="button" onClick={onClose}>{t.compose.cancel}</Button>
           <Button type="submit" disabled={sendEmail.isPending || !selectedAccount}>
             {sendEmail.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Enviar
+            {t.compose.send}
           </Button>
         </div>
       </form>

@@ -3,6 +3,7 @@ import { Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RichTextEditor } from '@/components/RichTextEditor';
 import { useSendEmail } from '@/hooks/useSendEmail';
+import { useI18n } from '@/i18n';
 import type { Email } from '@/types/email';
 
 interface ReplyInlineProps {
@@ -12,6 +13,7 @@ interface ReplyInlineProps {
 
 export function ReplyInline({ originalEmail, onClose }: ReplyInlineProps) {
   const sendEmail = useSendEmail();
+  const { t } = useI18n();
   const [body, setBody] = useState('');
 
   const handleSend = async () => {
@@ -28,7 +30,7 @@ export function ReplyInline({ originalEmail, onClose }: ReplyInlineProps) {
         subject: replySubject,
         body: `${body}
           <br/><hr/>
-          <p>Em ${originalEmail.date}, ${originalEmail.from} &lt;${originalEmail.from_email}&gt; escreveu:</p>
+          <p>${originalEmail.from} &lt;${originalEmail.from_email}&gt; ${t.reply.wrote}:</p>
           <blockquote style="border-left: 2px solid #ccc; padding-left: 12px; margin-left: 0; color: #666;">
             ${originalEmail.body}
           </blockquote>`,
@@ -44,7 +46,7 @@ export function ReplyInline({ originalEmail, onClose }: ReplyInlineProps) {
     <div className="border-t bg-muted/20 p-4 space-y-3 animate-fade-in">
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium">
-          Responder para <span className="text-muted-foreground">{originalEmail.from} &lt;{originalEmail.from_email}&gt;</span>
+          {t.reply.replyTo} <span className="text-muted-foreground">{originalEmail.from} &lt;{originalEmail.from_email}&gt;</span>
         </p>
         <Button variant="ghost" size="sm" onClick={onClose}>
           <X className="h-4 w-4" />
@@ -53,16 +55,16 @@ export function ReplyInline({ originalEmail, onClose }: ReplyInlineProps) {
 
       <RichTextEditor
         onChange={setBody}
-        placeholder="Escreva sua resposta..."
+        placeholder={t.reply.placeholder}
         minHeight="120px"
         autoFocus
       />
 
       <div className="flex items-center justify-end gap-2">
-        <Button variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
+        <Button variant="outline" size="sm" onClick={onClose}>{t.reply.cancel}</Button>
         <Button size="sm" onClick={handleSend} disabled={sendEmail.isPending || !body.trim() || body === '<p></p>'}>
           {sendEmail.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Enviar resposta
+          {t.reply.send}
         </Button>
       </div>
     </div>

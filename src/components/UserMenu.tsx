@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { UserCircle, Settings, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useI18n } from '@/i18n';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +13,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 export function UserMenu() {
   const { user, signOut } = useAuth();
+  const { t } = useI18n();
   const navigate = useNavigate();
 
   const initials = (user?.user_metadata?.name || user?.email || 'U')
@@ -30,19 +32,19 @@ export function UserMenu() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
         <div className="px-2 py-1.5">
-          <p className="text-sm font-medium truncate">{user?.user_metadata?.name || 'Usuário'}</p>
+          <p className="text-sm font-medium truncate">{user?.user_metadata?.name || t.common.user}</p>
           <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
         </div>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => navigate('/app/perfil')}>
-          <UserCircle className="mr-2 h-4 w-4" /> Perfil
+        <DropdownMenuItem onClick={() => navigate('/app/profile')}>
+          <UserCircle className="mr-2 h-4 w-4" /> {t.sidebar.profile}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => navigate('/app/configuracoes')}>
-          <Settings className="mr-2 h-4 w-4" /> Configurações
+        <DropdownMenuItem onClick={() => navigate('/app/settings')}>
+          <Settings className="mr-2 h-4 w-4" /> {t.sidebar.settings}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={async () => { await signOut(); navigate('/login'); }}>
-          <LogOut className="mr-2 h-4 w-4" /> Sair
+          <LogOut className="mr-2 h-4 w-4" /> {t.sidebar.signOut}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
