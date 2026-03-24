@@ -345,7 +345,7 @@ export default function MailPage({ folder }: MailPageProps) {
             </div>
           </ResizablePanel>
           <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={70}>
+          <ResizablePanel defaultSize={62}>
             {composing ? (
               <ComposeInline onClose={() => setComposing(false)} />
             ) : selectedEmail ? (
