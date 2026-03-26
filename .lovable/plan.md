@@ -1,65 +1,42 @@
 
 
-# Plano: Dark Mode + Estatísticas + Stripe
+# Plano: Manter o App Funcionando Sem Timeout
 
-## 1. Dark Mode
+## Problema
 
-O CSS já possui variáveis `.dark` definidas em `index.css`. Falta apenas o mecanismo de toggle.
+O erro `404: NOT_FOUND` ocorre porque a Edge Function `fetch-emails` excede o limite de CPU (2 segundos) do Supabase ao abrir conexões IMAP. Com o polling automático a cada 60s, após algumas chamadas a função começa a falhar consistentemente, e a lógica atual de backoff (4x o intervalo após 3 falhas) eventualmente para de funcionar.
 
-**Ações:**
-- Criar hook `useTheme` que lê/grava a preferência do `user_preferences.theme` e aplica/remove a classe `dark` no `<html>`
-- Adicionar botão de toggle (ícone sol/lua) no `AppSidebar` e na `SettingsPage`
-- Sincronizar com `localStorage` para aplicação imediata antes do fetch do banco
+## Solução
 
-**Arquivos:** novo `src/hooks/useTheme.ts`, editar `AppSidebar.tsx`, `SettingsPage.tsx`, `index.html` (script inline para evitar flash)
+Implementar uma estratégia de resiliência mais robusta no cliente, sem precisar mudar a Edge Function:
 
----
+### 1. Backoff exponencial com recuperação automática
 
-## 2. Dashboard de Estatísticas
+Quando falhas consecutivas ocorrem, aumentar progressivamente o intervalo de polling (60s → 120s → 240s → 5min max). Quando uma chamada volta a funcionar, resetar imediatamente ao intervalo normal. Isso já existe parcialmente mas precisa ser mais gradual.
 
-Como os e-mails não são persistidos no banco (são buscados via IMAP em tempo real), as estatísticas serão coletadas no momento da busca e armazenadas numa nova tabela.
+### 2. Cache local dos emails com `staleTime`
 
-**Ações:**
-- Criar tabela `email_stats` via migração:
-  - `id`, `user_id`, `account_id`, `date` (DATE), `received_count`, `sent_count`, `avg_response_time_minutes`, `top_senders` (JSONB), `created_at`
-  - RLS: usuário só vê os próprios dados
-- Criar edge function `collect-stats` que, para cada conta, conecta via IMAP e calcula volume diário, top remetentes e tempo médio de resposta, salvando em `email_stats`
-- Criar página `StatsPage` com 4 cards + gráficos usando Recharts (já disponível via chart.tsx):
-  - **Volume de e-mails**: gráfico de barras recebidos vs enviados por dia/semana
-  - **Tempo de resposta**: gráfico de linha com média por dia
-  - **Top remetentes**: lista ranqueada com barras horizontais
-  - **E-mails por conta**: gráfico de pizza/donut
-- Adicionar rota `/app/estatisticas` e link no sidebar com ícone `BarChart3`
-- Botão "Atualizar estatísticas" que invoca a edge function
+Configurar `staleTime` no React Query para que os dados em cache sejam considerados válidos por mais tempo (ex: 5 minutos), evitando refetches desnecessários quando o usuário navega entre pastas.
 
----
+### 3. Pausar polling quando a aba está inativa
 
-## 3. Integração Stripe (Assinatura Mensal/Anual)
+Usar `refetchOnWindowFocus: false` e `refetchIntervalInBackground: false` para não fazer chamadas quando o usuário não está olhando para o app. Isso reduz drasticamente a carga na Edge Function.
 
-**Ações:**
-- Habilitar Stripe via ferramenta `stripe--enable` (coleta a secret key automaticamente)
-- Após habilitação, seguir o fluxo nativo do Lovable Stripe para:
-  - Criar produtos (ex: Plano Pro mensal, Plano Pro anual)
-  - Criar página de pricing `/app/planos` com cards de planos
-  - Criar edge function para checkout session e webhook
-  - Criar tabela `subscriptions` para rastrear status do usuário
-  - Adicionar lógica de gating: verificar se o usuário tem assinatura ativa antes de liberar funcionalidades premium (ex: mais de 2 contas, estatísticas avançadas)
-  - Adicionar badge "Pro" no sidebar e opção de gerenciar assinatura no perfil
+### 4. Tratamento graceful de erros na UI
 
----
+Em vez de mostrar o erro 404 bruto, mostrar uma mensagem amigável tipo "Sincronizando..." e manter os dados anteriores visíveis.
 
-## Ordem de Implementação
+## Alterações Técnicas
 
-1. Dark mode (menor escopo, impacto visual imediato)
-2. Tabela + edge function + página de estatísticas
-3. Integração Stripe (requer habilitação e configuração externa)
+### `src/hooks/useEmails.ts`
+- Adicionar `staleTime: 5 * 60 * 1000` (5 min)
+- Adicionar `refetchOnWindowFocus: false`
+- Adicionar `refetchIntervalInBackground: false`
+- Melhorar backoff: escalar gradualmente (failures * 2 * baseInterval, max 5min)
+- Adicionar `gcTime: 10 * 60 * 1000` para manter cache por 10 min
 
----
+### `src/pages/MailPage.tsx` (ou componente de erro)
+- Substituir exibição de erro bruto por mensagem amigável quando há dados em cache disponíveis
 
-## Detalhes Técnicos
-
-- **Migração SQL** para `email_stats` com RLS por `user_id`
-- **Recharts** já está disponível no projeto (componente `chart.tsx`)
-- **Stripe** será habilitado via ferramenta nativa do Lovable, que gerencia secrets e webhooks automaticamente
-- **Theme** usa classe `dark` no `<html>` — todas as variáveis CSS já estão definidas
+Essas mudanças garantem que o app continue funcionando indefinidamente, usando dados em cache quando o servidor falha, e reduzindo a frequência de chamadas para evitar sobrecarregar a Edge Function.
 
