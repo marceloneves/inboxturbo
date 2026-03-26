@@ -68,6 +68,13 @@ export function useEmails(folder: string) {
   const queryClient = useQueryClient();
   const consecutiveFailures = useRef(0);
 
+  const getRefetchInterval = () => {
+    const failures = consecutiveFailures.current;
+    if (failures === 0) return fetchIntervalMs;
+    // Exponential backoff: base * 2^failures, max 5 min
+    return Math.min(fetchIntervalMs * Math.pow(2, failures), 300000);
+  };
+
   const query = useQuery({
     queryKey: ['emails', folder, accounts.map((a) => a.id)],
     queryFn: async () => {
@@ -98,11 +105,11 @@ export function useEmails(folder: string) {
       return allEmails;
     },
     enabled: accounts.length > 0,
-    // Back off polling when failures accumulate
-    refetchInterval: consecutiveFailures.current >= 3
-      ? Math.min(fetchIntervalMs * 4, 300000)
-      : fetchIntervalMs,
-    // Keep previous data on error so UI doesn't break
+    refetchInterval: getRefetchInterval(),
+    refetchOnWindowFocus: false,
+    refetchIntervalInBackground: false,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     placeholderData: (prev) => prev,
     retry: 1,
     retryDelay: 2000,
