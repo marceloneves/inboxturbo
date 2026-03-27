@@ -15,6 +15,7 @@ import { EmailList } from '@/components/EmailList';
 import { EmailViewer } from '@/components/EmailViewer';
 import { ComposeInline } from '@/components/ComposeInline';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -33,7 +34,7 @@ export default function MailPage({ folder }: MailPageProps) {
     setComposing: (v: boolean) => void;
   }>();
   const { accounts, isLoading: accountsLoading } = useEmailAccounts();
-  const { emails: remoteEmails, isLoading: emailsLoading, fetchEmailBody } = useEmails(folder);
+  const { emails: remoteEmails, isLoading: emailsLoading, error: emailsError, refetch, fetchEmailBody } = useEmails(folder);
   const deleteEmail = useDeleteEmail();
   const archiveEmail = useArchiveEmail();
   const emptyTrash = useEmptyTrash();
@@ -48,6 +49,7 @@ export default function MailPage({ folder }: MailPageProps) {
   const [filterAccount, setFilterAccount] = useState<string>('all');
   const [accountSearch, setAccountSearch] = useState('');
   const [loadingBody, setLoadingBody] = useState(false);
+  const [bodyLoadError, setBodyLoadError] = useState<string | null>(null);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
   const bodyCache = useRef<Map<string, { body: string; to: string[]; cc?: string[]; attachments?: EmailAttachment[] }>>(new Map());
@@ -124,6 +126,7 @@ export default function MailPage({ folder }: MailPageProps) {
 
   const handleSelectEmail = useCallback(async (email: Email) => {
     setComposing(false);
+    setBodyLoadError(null);
     const [accountId, uidStr] = email.id.split('::');
     const uid = parseInt(uidStr);
     if (!email.is_read) {
@@ -142,7 +145,8 @@ export default function MailPage({ folder }: MailPageProps) {
       bodyCache.current.set(email.id, { body, to: fullEmail.to, cc: fullEmail.cc, attachments: fullEmail.attachments });
       setSelectedEmail({ ...email, body, to: fullEmail.to, cc: fullEmail.cc, attachments: fullEmail.attachments });
     } else {
-      setSelectedEmail({ ...email, body: '<p>—</p>' });
+      setSelectedEmail(email);
+      setBodyLoadError('body-load-error');
     }
     setLoadingBody(false);
   }, [setComposing, markAsRead, fetchEmailBody, t]);
@@ -298,21 +302,33 @@ export default function MailPage({ folder }: MailPageProps) {
             <div className="flex-1 min-w-0">
               {composing ? (
                 <ComposeInline onClose={() => setComposing(false)} />
-              ) : selectedEmail ? (
-                <EmailViewer
-                  email={selectedEmail}
-                  onBack={() => setSelectedEmail(null)}
-                  onDelete={(id) => setDeleteTarget(id)}
-                  onArchive={folder !== 'archive' ? handleArchive : undefined}
-                  isDeleting={deleteEmail.isPending}
-                  isArchiving={archiveEmail.isPending}
-                />
+             ) : selectedEmail ? (
+               bodyLoadError && !loadingBody ? (
+                 <ErrorState
+                   message="Não foi possível carregar o conteúdo deste e-mail agora. Tente novamente em instantes."
+                   onRetry={() => handleSelectEmail(selectedEmail)}
+                 />
+               ) : (
+                 <EmailViewer
+                   email={selectedEmail}
+                   onBack={() => setSelectedEmail(null)}
+                   onDelete={(id) => setDeleteTarget(id)}
+                   onArchive={folder !== 'archive' ? handleArchive : undefined}
+                   isDeleting={deleteEmail.isPending}
+                   isArchiving={archiveEmail.isPending}
+                 />
+               )
               ) : null}
             </div>
           ) : (
             <div className="flex flex-col w-full">
               <ListHeader />
-              {filteredEmails.length === 0 ? (
+               {emailsError && filteredEmails.length === 0 ? (
+                 <ErrorState
+                   message="Não foi possível sincronizar os e-mails agora. Tente novamente em instantes."
+                   onRetry={() => refetch()}
+                 />
+               ) : filteredEmails.length === 0 ? (
                 <EmptyState icon={Inbox} title={t.mail.noEmails} description={isLoading ? t.mail.loadingEmails : folder === 'inbox' ? t.mail.inboxEmpty : t.mail.noMessagesFound} />
               ) : (
                 <EmailList
@@ -348,15 +364,22 @@ export default function MailPage({ folder }: MailPageProps) {
           <ResizablePanel defaultSize={62}>
             {composing ? (
               <ComposeInline onClose={() => setComposing(false)} />
-            ) : selectedEmail ? (
-              <EmailViewer
-                email={selectedEmail}
-                onBack={() => setSelectedEmail(null)}
-                onDelete={(id) => setDeleteTarget(id)}
-                onArchive={folder !== 'archive' ? handleArchive : undefined}
-                isDeleting={deleteEmail.isPending}
-                isArchiving={archiveEmail.isPending}
-              />
+             ) : selectedEmail ? (
+               bodyLoadError && !loadingBody ? (
+                 <ErrorState
+                   message="Não foi possível carregar o conteúdo deste e-mail agora. Tente novamente em instantes."
+                   onRetry={() => handleSelectEmail(selectedEmail)}
+                 />
+               ) : (
+                 <EmailViewer
+                   email={selectedEmail}
+                   onBack={() => setSelectedEmail(null)}
+                   onDelete={(id) => setDeleteTarget(id)}
+                   onArchive={folder !== 'archive' ? handleArchive : undefined}
+                   isDeleting={deleteEmail.isPending}
+                   isArchiving={archiveEmail.isPending}
+                 />
+               )
             ) : (
               <div className="flex h-full items-center justify-center">
                 <div className="text-center text-muted-foreground">

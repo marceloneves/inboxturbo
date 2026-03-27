@@ -100,11 +100,15 @@ Deno.serve(async (req) => {
 
     // If requesting a specific email by UID
     if (uid) {
-      const msg = await client.fetchOne(uid.toString(), {
-        bodyStructure: true,
-        envelope: true,
-        uid: true,
-      });
+      const msg = await client.fetchOne(
+        uid.toString(),
+        {
+          bodyStructure: true,
+          envelope: true,
+          uid: true,
+        },
+        { uid: true }
+      );
 
       const textPartInfo = findTextPart(msg.bodyStructure);
       const attachments = findAttachmentParts(msg.bodyStructure);
