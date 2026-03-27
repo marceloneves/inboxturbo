@@ -125,6 +125,7 @@ export function useEmails(folder: string) {
   });
 
   const fetchEmailBody = async (accountId: string, uid: number): Promise<RemoteEmail | null> => {
+    await ensureSession();
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const { data, error } = await supabase.functions.invoke('fetch-emails', {
