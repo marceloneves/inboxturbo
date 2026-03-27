@@ -22,12 +22,21 @@ export interface RemoteEmail {
   attachments?: EmailAttachment[];
 }
 
+async function ensureSession() {
+  const { data } = await supabase.auth.getSession();
+  if (!data.session) {
+    const { error } = await supabase.auth.refreshSession();
+    if (error) console.warn('Session refresh failed:', error.message);
+  }
+}
+
 async function fetchWithRetry(
   accountId: string,
   folder: string,
   friendlyName: string,
   retries = 2
 ): Promise<RemoteEmail[]> {
+  await ensureSession();
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const { data, error } = await supabase.functions.invoke('fetch-emails', {
